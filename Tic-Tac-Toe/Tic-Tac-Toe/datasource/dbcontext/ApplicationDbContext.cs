@@ -55,6 +55,10 @@ public class ApplicationDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.UserId).HasColumnName("user_id").IsRequired();
+            entity.Property(e => e.Player1Id).HasColumnName("player1_id");
+            entity.Property(e => e.Player2Id).HasColumnName("player2_id");
+            entity.Property(e => e.CurrentPlayerId).HasColumnName("current_player_id");
+            entity.Property(e => e.WinnerId).HasColumnName("winner_id");
             entity.Property(e => e.Board)
                 .HasColumnName("board")
                 .HasColumnType("jsonb")
