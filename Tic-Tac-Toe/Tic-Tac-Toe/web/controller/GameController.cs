@@ -4,6 +4,7 @@ using Tic_Tac_Toe.domain.service;
 using Tic_Tac_Toe.datasource.repository;
 using Tic_Tac_Toe.web.model;
 using Tic_Tac_Toe.web.mapper;
+using System.Linq;
 
 namespace Tic_Tac_Toe.web.controller;
 
@@ -21,6 +22,32 @@ public class GameController : ControllerBase
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
+    /// Получение доступных игр (ожидающих второго игрока)
+    [HttpGet("available")]
+    public IActionResult GetAvailableGames()
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized(new ErrorResponse("User ID not found in authorization context"));
+        }
+
+        var availableGames = _repository.GetAvailableGames();
+        
+        // Исключаем игры, созданные текущим пользователем
+        var gamesForUser = availableGames
+            .Where(g => g.Player1Id != userId)
+            .ToList();
+
+        var responses = gamesForUser.Select(game =>
+        {
+            var gameStatus = GameStatus.WaitingForPlayers;
+            return GameMapper.ToResponse(game, gameStatus);
+        }).ToList();
+
+        return Ok(responses);
+    }
+
+    /// Получение игры по ID
     [HttpGet("{id}")]
     public IActionResult GetGame(Guid id, [FromQuery] string firstMove = "player")
     {
@@ -33,6 +60,8 @@ public class GameController : ControllerBase
         
         if (currentGame == null)
         {
+            // Обратная совместимость: создание игры с компьютером через GET (для старого клиента)
+            // Для новых игр используйте POST /game
             bool computerFirst = (firstMove?.ToLower() == "computer");
             currentGame = new Game(id, userId, new GameBoard());
             
@@ -45,7 +74,12 @@ public class GameController : ControllerBase
         }
         else
         {
-            if (currentGame.UserId != userId)
+            // Проверка доступа: игрок должен быть владельцем (UserId) или одним из игроков (Player1Id/Player2Id)
+            bool hasAccess = currentGame.UserId == userId ||
+                            currentGame.Player1Id == userId ||
+                            currentGame.Player2Id == userId;
+            
+            if (!hasAccess)
             {
                 return Forbid();
             }
@@ -54,6 +88,67 @@ public class GameController : ControllerBase
         var gameStatus = _gameService.CheckGameEnd(currentGame);
         var response = GameMapper.ToResponse(currentGame, gameStatus);
         return Ok(response);
+    }
+
+    /// Создание новой игры
+    [HttpPost]
+    public IActionResult CreateGame([FromBody] CreateGameRequest request)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized(new ErrorResponse("User ID not found in authorization context"));
+        }
+
+        if (request == null)
+        {
+            return BadRequest(new ErrorResponse("Request body is required"));
+        }
+
+        var gameType = request.GameType?.ToLower() ?? "computer";
+        var gameId = Guid.NewGuid();
+        Game newGame;
+
+        if (gameType == "player")
+        {
+            // Игра с другим игроком
+            if (!request.Player2Id.HasValue)
+            {
+                return BadRequest(new ErrorResponse("Player2Id is required for player vs player game"));
+            }
+
+            if (request.Player2Id.Value == userId)
+            {
+                return BadRequest(new ErrorResponse("Cannot create game with yourself"));
+            }
+
+            newGame = new Game(gameId, userId, new GameBoard())
+            {
+                Player1Id = userId,
+                Player2Id = request.Player2Id.Value,
+                CurrentPlayerId = userId,
+            };
+
+            var gameStatus = GameStatus.PlayerTurn;
+            _repository.Save(newGame);
+            var response = GameMapper.ToResponse(newGame, gameStatus);
+            return CreatedAtAction(nameof(GetGame), new { id = gameId }, response);
+        }
+        else
+        {
+            // Игра с компьютером
+            bool computerFirst = (request.FirstMove?.ToLower() == "computer");
+            newGame = new Game(gameId, userId, new GameBoard());
+
+            if (computerFirst)
+            {
+                _gameService.MakeComputerMove(newGame);
+            }
+
+            _repository.Save(newGame);
+            var gameStatus = _gameService.CheckGameEnd(newGame);
+            var response = GameMapper.ToResponse(newGame, gameStatus);
+            return CreatedAtAction(nameof(GetGame), new { id = gameId }, response);
+        }
     }
 
     [HttpPost("{id}")]
@@ -93,19 +188,22 @@ public class GameController : ControllerBase
         
         if (currentGame == null)
         {
-            currentGame = new Game(id, userId, new GameBoard());
+            return NotFound(new ErrorResponse("Game not found"));
         }
-        else
-        {
-            if (currentGame.UserId != userId)
-            {
-                return Forbid();
-            }
 
-            if (!_gameService.ValidateBoardBeforeMove(currentGame, gameFromRequest.Board))
-            {
-                return BadRequest(new ErrorResponse("Invalid game board: previous moves have been changed"));
-            }
+        // Проверка доступа: игрок должен быть владельцем (UserId) или одним из игроков (Player1Id/Player2Id)
+        bool hasAccess = currentGame.UserId == userId ||
+                        currentGame.Player1Id == userId ||
+                        currentGame.Player2Id == userId;
+        
+        if (!hasAccess)
+        {
+            return Forbid();
+        }
+
+        if (!_gameService.ValidateBoardBeforeMove(currentGame, gameFromRequest.Board))
+        {
+            return BadRequest(new ErrorResponse("Invalid game board: previous moves have been changed"));
         }
 
         if (!_gameService.ProcessPlayerMove(currentGame, gameFromRequest.Board))

@@ -10,5 +10,9 @@ public interface IGameRepository
 
     /// Получить текущую игру по UUID
     Game? Get(Guid id);
+
+    /// Получить доступные игры (ожидающие второго игрока)
+    /// Игры, где Player1Id != null и Player2Id == null
+    List<Game> GetAvailableGames();
 }
 

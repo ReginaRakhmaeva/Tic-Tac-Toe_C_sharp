@@ -3,6 +3,7 @@ using Tic_Tac_Toe.datasource.dbcontext;
 using Tic_Tac_Toe.datasource.mapper;
 using Tic_Tac_Toe.domain.model;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace Tic_Tac_Toe.datasource.repository;
 
@@ -33,20 +34,37 @@ public class GameRepository : IGameRepository
             var gameDto = GameMapper.ToDto(game);
             _logger.LogInformation("GameDto created: Id={Id}, UserId={UserId}", gameDto.Id, gameDto.UserId);
             
-            var existingGame = _context.Games.Find(game.Id);
+            var existingGame = _context.Games
+                .Include(g => g.Moves)
+                .FirstOrDefault(g => g.Id == game.Id);
             
             if (existingGame != null)
             {
                 _logger.LogInformation("Updating existing game");
                 existingGame.UserId = gameDto.UserId;
+                existingGame.Player1Id = gameDto.Player1Id;
+                existingGame.Player2Id = gameDto.Player2Id;
+                existingGame.CurrentPlayerId = gameDto.CurrentPlayerId;
+                existingGame.WinnerId = gameDto.WinnerId;
                 existingGame.Board = gameDto.Board;
-                existingGame.MoveHistory = gameDto.MoveHistory;
+                
+                // Удаляем старые ходы
+                _context.Moves.RemoveRange(existingGame.Moves);
+                
+                // Добавляем новые ходы из gameDto
+                if (gameDto.Moves != null && gameDto.Moves.Any())
+                {
+                    _context.Moves.AddRange(gameDto.Moves);
+                }
+                
                 _context.Games.Update(existingGame);
             }
             else
             {
                 _logger.LogInformation("Adding new game to context");
                 _context.Games.Add(gameDto);
+                
+                // Ходы уже добавлены в gameDto через маппер
             }
 
             _logger.LogInformation("Calling SaveChanges()");
@@ -70,7 +88,9 @@ public class GameRepository : IGameRepository
     /// Получить текущую игру по UUID
     public Game? Get(Guid id)
     {
-        var gameDto = _context.Games.Find(id);
+        var gameDto = _context.Games
+            .Include(g => g.Moves)
+            .FirstOrDefault(g => g.Id == id);
         
         if (gameDto == null)
         {
@@ -78,6 +98,17 @@ public class GameRepository : IGameRepository
         }
 
         return GameMapper.ToDomain(gameDto);
+    }
+
+    /// Получить доступные игры (ожидающие второго игрока)
+    public List<Game> GetAvailableGames()
+    {
+        var gameDtos = _context.Games
+            .Include(g => g.Moves)
+            .Where(g => g.Player1Id != null && g.Player2Id == null)
+            .ToList();
+
+        return gameDtos.Select(g => GameMapper.ToDomain(g)).ToList();
     }
 }
 
