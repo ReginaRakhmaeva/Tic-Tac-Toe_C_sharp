@@ -47,9 +47,53 @@ public class GameController : ControllerBase
         return Ok(responses);
     }
 
+    /// Присоединение пользователя к игре
+    [HttpPost("{id}/join")]
+    public IActionResult JoinGame(Guid id)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized(new ErrorResponse("User ID not found in authorization context"));
+        }
+
+        var game = _repository.Get(id);
+        
+        if (game == null)
+        {
+            return NotFound(new ErrorResponse("Game not found"));
+        }
+
+        // Проверка, что игра доступна для присоединения
+        if (game.Player1Id == null)
+        {
+            return BadRequest(new ErrorResponse("Game is not available for joining"));
+        }
+
+        if (game.Player2Id != null)
+        {
+            return BadRequest(new ErrorResponse("Game already has two players"));
+        }
+
+        // Проверка, что пользователь не является создателем игры
+        if (game.Player1Id == userId)
+        {
+            return BadRequest(new ErrorResponse("Cannot join your own game"));
+        }
+
+        // Присоединение к игре
+        game.Player2Id = userId;
+        game.CurrentPlayerId = game.Player1Id; // Первый игрок начинает
+
+        _repository.Save(game);
+
+        var gameStatus = GameStatus.PlayerTurn;
+        var response = GameMapper.ToResponse(game, gameStatus);
+        return Ok(response);
+    }
+
     /// Получение игры по ID
     [HttpGet("{id}")]
-    public IActionResult GetGame(Guid id, [FromQuery] string firstMove = "player")
+    public IActionResult GetGame(Guid id)
     {
         if (!TryGetUserId(out var userId))
         {
@@ -60,32 +104,30 @@ public class GameController : ControllerBase
         
         if (currentGame == null)
         {
-            // Обратная совместимость: создание игры с компьютером через GET (для старого клиента)
-            // Для новых игр используйте POST /game
-            bool computerFirst = (firstMove?.ToLower() == "computer");
-            currentGame = new Game(id, userId, new GameBoard());
-            
-            if (computerFirst)
-            {
-                _gameService.MakeComputerMove(currentGame);
-            }
-            
-            _repository.Save(currentGame);
+            return NotFound(new ErrorResponse("Game not found"));
+        }
+
+        // Проверка доступа: игрок должен быть владельцем (UserId) или одним из игроков (Player1Id/Player2Id)
+        bool hasAccess = currentGame.UserId == userId ||
+                        currentGame.Player1Id == userId ||
+                        currentGame.Player2Id == userId;
+        
+        if (!hasAccess)
+        {
+            return Forbid();
+        }
+        
+        // Если игра ожидает второго игрока, возвращаем статус WaitingForPlayers
+        GameStatus gameStatus;
+        if (currentGame.Player1Id != null && currentGame.Player2Id == null)
+        {
+            gameStatus = GameStatus.WaitingForPlayers;
         }
         else
         {
-            // Проверка доступа: игрок должен быть владельцем (UserId) или одним из игроков (Player1Id/Player2Id)
-            bool hasAccess = currentGame.UserId == userId ||
-                            currentGame.Player1Id == userId ||
-                            currentGame.Player2Id == userId;
-            
-            if (!hasAccess)
-            {
-                return Forbid();
-            }
+            gameStatus = _gameService.CheckGameEnd(currentGame);
         }
         
-        var gameStatus = _gameService.CheckGameEnd(currentGame);
         var response = GameMapper.ToResponse(currentGame, gameStatus);
         return Ok(response);
     }
@@ -111,27 +153,41 @@ public class GameController : ControllerBase
         if (gameType == "player")
         {
             // Игра с другим игроком
-            if (!request.Player2Id.HasValue)
+            if (request.Player2Id.HasValue)
             {
-                return BadRequest(new ErrorResponse("Player2Id is required for player vs player game"));
+                // Если Player2Id указан, создаем игру с двумя игроками сразу
+                if (request.Player2Id.Value == userId)
+                {
+                    return BadRequest(new ErrorResponse("Cannot create game with yourself"));
+                }
+
+                newGame = new Game(gameId, userId, new GameBoard())
+                {
+                    Player1Id = userId,
+                    Player2Id = request.Player2Id.Value,
+                    CurrentPlayerId = userId,
+                };
+
+                var gameStatus = GameStatus.PlayerTurn;
+                _repository.Save(newGame);
+                var response = GameMapper.ToResponse(newGame, gameStatus);
+                return CreatedAtAction(nameof(GetGame), new { id = gameId }, response);
             }
-
-            if (request.Player2Id.Value == userId)
+            else
             {
-                return BadRequest(new ErrorResponse("Cannot create game with yourself"));
+                // Если Player2Id не указан, создаем игру, ожидающую второго игрока
+                newGame = new Game(gameId, userId, new GameBoard())
+                {
+                    Player1Id = userId,
+                    Player2Id = null,
+                    CurrentPlayerId = null, // Ход еще не начался
+                };
+
+                var gameStatus = GameStatus.WaitingForPlayers;
+                _repository.Save(newGame);
+                var response = GameMapper.ToResponse(newGame, gameStatus);
+                return CreatedAtAction(nameof(GetGame), new { id = gameId }, response);
             }
-
-            newGame = new Game(gameId, userId, new GameBoard())
-            {
-                Player1Id = userId,
-                Player2Id = request.Player2Id.Value,
-                CurrentPlayerId = userId,
-            };
-
-            var gameStatus = GameStatus.PlayerTurn;
-            _repository.Save(newGame);
-            var response = GameMapper.ToResponse(newGame, gameStatus);
-            return CreatedAtAction(nameof(GetGame), new { id = gameId }, response);
         }
         else
         {

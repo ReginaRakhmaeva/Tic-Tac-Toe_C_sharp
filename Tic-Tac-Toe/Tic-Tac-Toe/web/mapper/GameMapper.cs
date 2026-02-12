@@ -34,7 +34,11 @@ public static class GameMapper
         {
             Id = domain.Id,
             Board = GameBoardMapper.ToResponse(domain.Board),
-            Status = status?.ToString() ?? "InProgress"
+            Status = status?.ToString() ?? "InProgress",
+            Player1Id = domain.Player1Id,
+            Player2Id = domain.Player2Id,
+            CurrentPlayerId = domain.CurrentPlayerId,
+            WinnerId = domain.WinnerId
         };
     }
 }
