@@ -12,14 +12,12 @@ public class UserAuthenticatorAttribute : Attribute, IAsyncAuthorizationFilter
 {
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
-        // Пропускаем проверку для Razor Pages (они используют другую модель авторизации)
         if (context.ActionDescriptor is Microsoft.AspNetCore.Mvc.RazorPages.CompiledPageActionDescriptor)
         {
             await Task.CompletedTask;
             return;
         }
 
-        // Проверяем атрибут [AllowAnonymous] через endpoint metadata (самый простой и надежный способ)
         var endpoint = context.HttpContext.GetEndpoint();
         if (endpoint != null)
         {
@@ -30,11 +28,9 @@ public class UserAuthenticatorAttribute : Attribute, IAsyncAuthorizationFilter
             }
         }
 
-        // Дополнительная проверка через reflection для контроллеров
         var actionDescriptor = context.ActionDescriptor as Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor;
         if (actionDescriptor != null)
         {
-            // Проверяем на уровне метода (приоритет выше)
             var hasAllowAnonymousOnMethod = actionDescriptor.MethodInfo
                 .GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true)
                 .Any();
@@ -45,7 +41,6 @@ public class UserAuthenticatorAttribute : Attribute, IAsyncAuthorizationFilter
                 return;
             }
 
-            // Проверяем на уровне контроллера
             var hasAllowAnonymousOnController = actionDescriptor.ControllerTypeInfo
                 .GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true)
                 .Any();
@@ -57,7 +52,6 @@ public class UserAuthenticatorAttribute : Attribute, IAsyncAuthorizationFilter
             }
         }
 
-        // Получаем AuthService из DI контейнера
         var authService = context.HttpContext.RequestServices.GetService<IAuthService>();
         
         if (authService == null)
@@ -66,7 +60,6 @@ public class UserAuthenticatorAttribute : Attribute, IAsyncAuthorizationFilter
             return;
         }
 
-        // Проверяем наличие заголовка Authorization
         if (!context.HttpContext.Request.Headers.ContainsKey("Authorization"))
         {
             context.Result = new UnauthorizedObjectResult(
@@ -83,7 +76,6 @@ public class UserAuthenticatorAttribute : Attribute, IAsyncAuthorizationFilter
             return;
         }
 
-        // Валидируем логин и пароль
         Guid? userId = authService.Authenticate(authorizationHeader);
 
         if (userId == null)
@@ -93,7 +85,6 @@ public class UserAuthenticatorAttribute : Attribute, IAsyncAuthorizationFilter
             return;
         }
 
-        // Сохраняем UserId в HttpContext для использования в контроллере
         context.HttpContext.Items["UserId"] = userId.Value;
 
         await Task.CompletedTask;

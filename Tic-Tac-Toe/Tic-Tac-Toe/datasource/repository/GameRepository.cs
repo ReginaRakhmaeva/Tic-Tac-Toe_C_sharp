@@ -29,10 +29,7 @@ public class GameRepository : IGameRepository
 
         try
         {
-            _logger.LogInformation("Saving game with Id: {GameId}, UserId: {UserId}", game.Id, game.UserId);
-
             var gameDto = GameMapper.ToDto(game);
-            _logger.LogInformation("GameDto created: Id={Id}, UserId={UserId}", gameDto.Id, gameDto.UserId);
             
             var existingGame = _context.Games
                 .Include(g => g.Moves)
@@ -40,36 +37,38 @@ public class GameRepository : IGameRepository
             
             if (existingGame != null)
             {
-                _logger.LogInformation("Updating existing game");
-                existingGame.UserId = gameDto.UserId;
-                existingGame.Player1Id = gameDto.Player1Id;
-                existingGame.Player2Id = gameDto.Player2Id;
-                existingGame.CurrentPlayerId = gameDto.CurrentPlayerId;
-                existingGame.WinnerId = gameDto.WinnerId;
-                existingGame.Board = gameDto.Board;
-                
-                // Удаляем старые ходы
-                _context.Moves.RemoveRange(existingGame.Moves);
-                
-                // Добавляем новые ходы из gameDto
-                if (gameDto.Moves != null && gameDto.Moves.Any())
+                if (existingGame.Player1Id == null && gameDto.Player1Id != null)
                 {
-                    _context.Moves.AddRange(gameDto.Moves);
+                    _context.Moves.RemoveRange(existingGame.Moves);
+                    _context.Games.Remove(existingGame);
+                    _context.SaveChanges(); 
+                    
+                    _context.Games.Add(gameDto);
                 }
-                
-                _context.Games.Update(existingGame);
+                else
+                {
+                    _context.Moves.RemoveRange(existingGame.Moves);
+                    
+                    existingGame.UserId = gameDto.UserId;
+                    existingGame.GameType = gameDto.GameType;
+                    existingGame.Player1Id = gameDto.Player1Id;
+                    existingGame.Player2Id = gameDto.Player2Id;
+                    existingGame.CurrentPlayerId = gameDto.CurrentPlayerId;
+                    existingGame.WinnerId = gameDto.WinnerId;
+                    existingGame.Board = gameDto.Board;
+                    
+                    if (gameDto.Moves != null && gameDto.Moves.Any())
+                    {
+                        _context.Moves.AddRange(gameDto.Moves);
+                    }
+                }
             }
             else
             {
-                _logger.LogInformation("Adding new game to context");
                 _context.Games.Add(gameDto);
-                
-                // Ходы уже добавлены в gameDto через маппер
             }
 
-            _logger.LogInformation("Calling SaveChanges()");
             _context.SaveChanges();
-            _logger.LogInformation("Game saved successfully");
         }
         catch (DbUpdateException ex)
         {
@@ -105,10 +104,89 @@ public class GameRepository : IGameRepository
     {
         var gameDtos = _context.Games
             .Include(g => g.Moves)
-            .Where(g => g.Player1Id != null && g.Player2Id == null)
+            .Where(g => g.GameType == 1 && 
+                       g.Player1Id != null && 
+                       g.Player2Id == null &&
+                       (!g.Moves.Any() || g.Moves.Count == 0)) 
             .ToList();
 
         return gameDtos.Select(g => GameMapper.ToDomain(g)).ToList();
+    }
+
+    /// Удалить игру по UUID
+    public void Delete(Guid id)
+    {
+        try
+        {
+            var gameDto = _context.Games
+                .Include(g => g.Moves)
+                .FirstOrDefault(g => g.Id == id);
+
+            if (gameDto != null)
+            {
+                if (gameDto.Moves != null && gameDto.Moves.Any())
+                {
+                    _context.Moves.RemoveRange(gameDto.Moves);
+                }
+
+                _context.Games.Remove(gameDto);
+                _context.SaveChanges();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while deleting game: {Message}, StackTrace: {StackTrace}", 
+                ex.Message, ex.StackTrace);
+            throw;
+        }
+    }
+
+    /// Получить неактивные игры по Player1Id (игры, которые еще не начались)
+    public List<Game> GetInactiveGamesByPlayer1Id(Guid player1Id)
+    {
+        var gameDtos = _context.Games
+            .Include(g => g.Moves)
+            .Where(g => g.Player1Id == player1Id && 
+                       g.Player2Id == null && 
+                       (!g.Moves.Any() || g.Moves.Count == 0))
+            .ToList();
+
+        return gameDtos.Select(g => GameMapper.ToDomain(g)).ToList();
+    }
+
+    /// Удалить все неактивные игры по Player1Id
+    public void DeleteInactiveGamesByPlayer1Id(Guid player1Id)
+    {
+        try
+        {
+            var gameDtos = _context.Games
+                .Include(g => g.Moves)
+                .Where(g => g.Player1Id == player1Id && 
+                           g.Player2Id == null && 
+                           (!g.Moves.Any() || g.Moves.Count == 0))
+                .ToList();
+
+            foreach (var gameDto in gameDtos)
+            {
+                if (gameDto.Moves != null && gameDto.Moves.Any())
+                {
+                    _context.Moves.RemoveRange(gameDto.Moves);
+                }
+
+                _context.Games.Remove(gameDto);
+            }
+
+            if (gameDtos.Any())
+            {
+                _context.SaveChanges();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while deleting inactive games for player: {Message}, StackTrace: {StackTrace}", 
+                ex.Message, ex.StackTrace);
+            throw;
+        }
     }
 }
 

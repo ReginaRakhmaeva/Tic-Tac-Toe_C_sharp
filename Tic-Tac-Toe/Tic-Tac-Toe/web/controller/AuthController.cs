@@ -54,7 +54,6 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            // В режиме разработки показываем полную информацию об ошибке
             var details = _environment.IsDevelopment() ? ex.ToString() : ex.Message;
             return StatusCode(500, new ErrorResponse("Internal server error", details));
         }
@@ -90,7 +89,6 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            // В режиме разработки показываем полную информацию об ошибке
             var details = _environment.IsDevelopment() ? ex.ToString() : ex.Message;
             return StatusCode(500, new ErrorResponse("Internal server error", details));
         }

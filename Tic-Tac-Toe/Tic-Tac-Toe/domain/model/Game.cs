@@ -1,37 +1,30 @@
 namespace Tic_Tac_Toe.domain.model;
 
-
-/// Модель текущей игры с UUID и игровым полем
 public class Game
 {
-    /// Уникальный идентификатор игры (UUID)
     public Guid Id { get; set; }
 
-    /// Идентификатор пользователя, владельца игры (для обратной совместимости с игрой против компьютера)
     public Guid UserId { get; set; }
 
-    /// Идентификатор первого игрока (играет за X)
+    public GameType GameType { get; set; }
+
     public Guid? Player1Id { get; set; }
 
-    /// Идентификатор второго игрока (играет за O)
     public Guid? Player2Id { get; set; }
 
-    /// Идентификатор текущего игрока, чей сейчас ход
     public Guid? CurrentPlayerId { get; set; }
 
-    /// Идентификатор победителя (если игра завершена)
     public Guid? WinnerId { get; set; }
 
-    /// Игровое поле
     public GameBoard Board { get; set; }
 
-    /// История ходов для валидации (хранит последовательность ходов)
     public List<Move> MoveHistory { get; set; }
 
     public Game()
     {
         Id = Guid.NewGuid();
         UserId = Guid.Empty;
+        GameType = GameType.Computer;
         Player1Id = null;
         Player2Id = null;
         CurrentPlayerId = null;
@@ -44,6 +37,7 @@ public class Game
     {
         Id = id;
         UserId = Guid.Empty;
+        GameType = GameType.Computer;
         Player1Id = null;
         Player2Id = null;
         CurrentPlayerId = null;
@@ -56,6 +50,7 @@ public class Game
     {
         Id = id;
         UserId = userId;
+        GameType = GameType.Computer;
         Player1Id = null;
         Player2Id = null;
         CurrentPlayerId = null;

@@ -10,14 +10,12 @@ public class GameServiceDataSource : IGameService
     private readonly IGameRepository _repository;
     private readonly GameService _domainService;
 
-    /// Конструктор, принимающий интерфейс репозитория
     public GameServiceDataSource(IGameRepository repository)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _domainService = new GameService();
     }
 
-    /// Получение следующего хода текущей игры алгоритмом Минимакс
     public Move GetNextMove(Game game)
     {
         if (game == null)
@@ -32,7 +30,6 @@ public class GameServiceDataSource : IGameService
         return move;
     }
 
-    /// Валидация игрового поля текущей игры (проверка, что не изменены предыдущие ходы)
     public bool ValidateBoard(Game game)
     {
         if (game == null)
@@ -43,7 +40,6 @@ public class GameServiceDataSource : IGameService
         return _domainService.ValidateBoard(game);
     }
 
-    /// Проверка окончания игры
     public GameStatus CheckGameEnd(Game game)
     {
         if (game == null)
@@ -54,7 +50,6 @@ public class GameServiceDataSource : IGameService
         return _domainService.CheckGameEnd(game);
     }
 
-    /// Обработка хода игрока: обновляет доску, определяет ход и добавляет в историю
     public bool ProcessPlayerMove(Game game, GameBoard newBoard)
     {
         if (game == null || newBoard == null)
@@ -65,7 +60,6 @@ public class GameServiceDataSource : IGameService
         return _domainService.ProcessPlayerMove(game, newBoard);
     }
 
-    /// Применение хода компьютера: получает ход, применяет к доске и добавляет в историю
     public Move MakeComputerMove(Game game)
     {
         if (game == null)
@@ -80,7 +74,6 @@ public class GameServiceDataSource : IGameService
         return move;
     }
 
-    /// Проверяет, что доска из запроса соответствует текущей доске игры (кроме нового хода игрока)
     public bool ValidateBoardBeforeMove(Game currentGame, GameBoard newBoard)
     {
         if (currentGame == null || newBoard == null)

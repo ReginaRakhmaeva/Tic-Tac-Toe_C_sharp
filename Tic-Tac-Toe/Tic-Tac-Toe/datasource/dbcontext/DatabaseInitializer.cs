@@ -4,10 +4,8 @@ using System.Linq;
 
 namespace Tic_Tac_Toe.datasource.dbcontext;
 
-/// Класс для инициализации базы данных
 public static class DatabaseInitializer
 {
-    /// Создает базу данных и таблицы, если их нет
     public static void Initialize(ApplicationDbContext context, ILogger logger)
     {
         try
@@ -20,7 +18,6 @@ public static class DatabaseInitializer
 
             logger.LogInformation("Подключение к базе данных установлено");
 
-            // Проверяем, существует ли таблица Users
             bool tablesExist = false;
             try
             {

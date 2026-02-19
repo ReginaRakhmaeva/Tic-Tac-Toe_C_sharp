@@ -3,10 +3,8 @@ using Tic_Tac_Toe.datasource.model;
 
 namespace Tic_Tac_Toe.datasource.dbcontext.Converters;
 
-/// Компаратор для сравнения списков MoveDto (используется в ValueComparer)
 public static class MoveHistoryComparer
 {
-    /// Сравнивает два списка MoveDto
     public static bool Compare(List<MoveDto>? c1, List<MoveDto>? c2)
     {
         if (c1 == null && c2 == null) return true;
@@ -17,7 +15,6 @@ public static class MoveHistoryComparer
         return json1 == json2;
     }
 
-    /// Вычисляет хеш-код списка MoveDto
     public static int GetHashCode(List<MoveDto>? c)
     {
         if (c == null) return 0;
@@ -25,7 +22,6 @@ public static class MoveHistoryComparer
         return json.GetHashCode();
     }
 
-    /// Создает глубокую копию списка MoveDto
     public static List<MoveDto> Clone(List<MoveDto>? c)
     {
         if (c == null) return new List<MoveDto>();

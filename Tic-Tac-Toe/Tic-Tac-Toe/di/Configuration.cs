@@ -9,14 +9,12 @@ namespace Tic_Tac_Toe.di;
 /// Класс для описания графа зависимостей
 public static class Configuration
 {
-    /// Регистрирует все зависимости для работы с играми
     public static void ConfigureDependencies(IServiceCollection services)
     {
         services.AddScoped<IGameRepository, GameRepository>();
 
         services.AddScoped<IGameService, GameServiceDataSource>();
 
-        // Регистрация зависимостей для работы с пользователями и авторизацией
         services.AddScoped<IUserRepository, UserRepository>();
 
         services.AddScoped<IUserService, UserService>();

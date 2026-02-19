@@ -33,7 +33,6 @@ public class GameController : ControllerBase
 
         var availableGames = _repository.GetAvailableGames();
         
-        // Исключаем игры, созданные текущим пользователем
         var gamesForUser = availableGames
             .Where(g => g.Player1Id != userId)
             .ToList();
@@ -63,7 +62,6 @@ public class GameController : ControllerBase
             return NotFound(new ErrorResponse("Game not found"));
         }
 
-        // Проверка, что игра доступна для присоединения
         if (game.Player1Id == null)
         {
             return BadRequest(new ErrorResponse("Game is not available for joining"));
@@ -74,15 +72,13 @@ public class GameController : ControllerBase
             return BadRequest(new ErrorResponse("Game already has two players"));
         }
 
-        // Проверка, что пользователь не является создателем игры
         if (game.Player1Id == userId)
         {
             return BadRequest(new ErrorResponse("Cannot join your own game"));
         }
 
-        // Присоединение к игре
         game.Player2Id = userId;
-        game.CurrentPlayerId = game.Player1Id; // Первый игрок начинает
+        game.CurrentPlayerId = game.Player1Id;
 
         _repository.Save(game);
 
@@ -107,7 +103,6 @@ public class GameController : ControllerBase
             return NotFound(new ErrorResponse("Game not found"));
         }
 
-        // Проверка доступа: игрок должен быть владельцем (UserId) или одним из игроков (Player1Id/Player2Id)
         bool hasAccess = currentGame.UserId == userId ||
                         currentGame.Player1Id == userId ||
                         currentGame.Player2Id == userId;
@@ -117,9 +112,17 @@ public class GameController : ControllerBase
             return Forbid();
         }
         
-        // Если игра ожидает второго игрока, возвращаем статус WaitingForPlayers
         GameStatus gameStatus;
-        if (currentGame.Player1Id != null && currentGame.Player2Id == null)
+        
+        bool hasPlayerLeft = currentGame.GameType == GameType.TwoPlayer && 
+                            (currentGame.Player1Id == null || currentGame.Player2Id == null) &&
+                            (currentGame.MoveHistory != null && currentGame.MoveHistory.Count > 0);
+        
+        if (hasPlayerLeft)
+        {
+            gameStatus = GameStatus.PlayerLeft;
+        }
+        else if (currentGame.GameType == GameType.TwoPlayer && currentGame.Player2Id == null)
         {
             gameStatus = GameStatus.WaitingForPlayers;
         }
@@ -147,25 +150,34 @@ public class GameController : ControllerBase
         }
 
         var gameType = request.GameType?.ToLower() ?? "computer";
+        
+        if (gameType == "player")
+        {
+            _repository.DeleteInactiveGamesByPlayer1Id(userId);
+        }
+        
         var gameId = Guid.NewGuid();
         Game newGame;
 
         if (gameType == "player")
         {
-            // Игра с другим игроком
             if (request.Player2Id.HasValue)
             {
-                // Если Player2Id указан, создаем игру с двумя игроками сразу
                 if (request.Player2Id.Value == userId)
                 {
                     return BadRequest(new ErrorResponse("Cannot create game with yourself"));
                 }
 
-                newGame = new Game(gameId, userId, new GameBoard())
+                newGame = new Game
                 {
+                    Id = gameId,
+                    UserId = userId,
+                    GameType = GameType.TwoPlayer,
                     Player1Id = userId,
                     Player2Id = request.Player2Id.Value,
                     CurrentPlayerId = userId,
+                    Board = new GameBoard(),
+                    MoveHistory = new List<Move>()
                 };
 
                 var gameStatus = GameStatus.PlayerTurn;
@@ -175,12 +187,16 @@ public class GameController : ControllerBase
             }
             else
             {
-                // Если Player2Id не указан, создаем игру, ожидающую второго игрока
-                newGame = new Game(gameId, userId, new GameBoard())
+                newGame = new Game
                 {
+                    Id = gameId,
+                    UserId = userId,
+                    GameType = GameType.TwoPlayer,
                     Player1Id = userId,
                     Player2Id = null,
-                    CurrentPlayerId = null, // Ход еще не начался
+                    CurrentPlayerId = null,
+                    Board = new GameBoard(),
+                    MoveHistory = new List<Move>()
                 };
 
                 var gameStatus = GameStatus.WaitingForPlayers;
@@ -191,9 +207,17 @@ public class GameController : ControllerBase
         }
         else
         {
-            // Игра с компьютером
             bool computerFirst = (request.FirstMove?.ToLower() == "computer");
-            newGame = new Game(gameId, userId, new GameBoard());
+            newGame = new Game
+            {
+                Id = gameId,
+                UserId = userId,
+                GameType = GameType.Computer,
+                Player1Id = userId,
+                Player2Id = GameConstants.ComputerId,
+                Board = new GameBoard(),
+                MoveHistory = new List<Move>()
+            };
 
             if (computerFirst)
             {
@@ -205,6 +229,96 @@ public class GameController : ControllerBase
             var response = GameMapper.ToResponse(newGame, gameStatus);
             return CreatedAtAction(nameof(GetGame), new { id = gameId }, response);
         }
+    }
+
+    /// Выход из игры (удаление игры, если она еще не началась)
+    [HttpPost("{id}/leave")]
+    public IActionResult LeaveGame(Guid id)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized(new ErrorResponse("User ID not found in authorization context"));
+        }
+
+        var game = _repository.Get(id);
+        
+        if (game == null)
+        {
+            return NotFound(new ErrorResponse("Game not found"));
+        }
+
+        bool isParticipant = game.UserId == userId || 
+                           game.Player1Id == userId || 
+                           game.Player2Id == userId;
+        
+        if (!isParticipant)
+        {
+            return Forbid();
+        }
+
+        bool isCreator = game.UserId == userId || game.Player1Id == userId;
+        bool isSecondPlayer = game.Player2Id == userId;
+        
+        bool canDelete = game.Player2Id == null && 
+                        (game.MoveHistory == null || game.MoveHistory.Count == 0);
+
+        if (canDelete)
+        {
+            _repository.Delete(id);
+            return Ok(new { message = "Game deleted successfully" });
+        }
+        else
+        {
+            if (isSecondPlayer)
+            {
+                _repository.Delete(id);
+                return Ok(new { message = "Game deleted successfully" });
+            }
+            else if (isCreator)
+            {
+                game.Player1Id = null;
+                
+                game.CurrentPlayerId = null;
+                
+                _repository.Save(game);
+                return Ok(new { message = "Left the game" });
+            }
+        }
+        
+        return BadRequest(new ErrorResponse("Unable to leave the game"));
+    }
+
+    /// Удаление игры (только для создателя, если игра еще не началась)
+    [HttpDelete("{id}")]
+    public IActionResult DeleteGame(Guid id)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized(new ErrorResponse("User ID not found in authorization context"));
+        }
+
+        var game = _repository.Get(id);
+        
+        if (game == null)
+        {
+            return NotFound(new ErrorResponse("Game not found"));
+        }
+
+        if (game.UserId != userId && game.Player1Id != userId)
+        {
+            return Forbid();
+        }
+
+        bool canDelete = game.Player2Id == null && 
+                        (game.MoveHistory == null || game.MoveHistory.Count == 0);
+
+        if (!canDelete)
+        {
+            return BadRequest(new ErrorResponse("Cannot delete game that has already started"));
+        }
+
+        _repository.Delete(id);
+        return NoContent();
     }
 
     [HttpPost("{id}")]
@@ -247,7 +361,6 @@ public class GameController : ControllerBase
             return NotFound(new ErrorResponse("Game not found"));
         }
 
-        // Проверка доступа: игрок должен быть владельцем (UserId) или одним из игроков (Player1Id/Player2Id)
         bool hasAccess = currentGame.UserId == userId ||
                         currentGame.Player1Id == userId ||
                         currentGame.Player2Id == userId;
@@ -255,6 +368,20 @@ public class GameController : ControllerBase
         if (!hasAccess)
         {
             return Forbid();
+        }
+
+        bool isTwoPlayerGame = currentGame.GameType == GameType.TwoPlayer;
+        if (isTwoPlayerGame)
+        {
+            if (currentGame.Player1Id == null || currentGame.Player2Id == null)
+            {
+                return BadRequest(new ErrorResponse("Your opponent has left the game"));
+            }
+            
+            if (currentGame.CurrentPlayerId != userId)
+            {
+                return BadRequest(new ErrorResponse("It's not your turn"));
+            }
         }
 
         if (!_gameService.ValidateBoardBeforeMove(currentGame, gameFromRequest.Board))
@@ -268,17 +395,38 @@ public class GameController : ControllerBase
         }
 
         var gameStatus = _gameService.CheckGameEnd(currentGame);
-        if (gameStatus != GameStatus.InProgress)
+        
+        bool isGameFinished = gameStatus == GameStatus.PlayerWins || 
+                             gameStatus == GameStatus.Draw;
+        
+        if (isGameFinished)
         {
             _repository.Save(currentGame);
             return Ok(GameMapper.ToResponse(currentGame, gameStatus));
         }
 
-        _gameService.MakeComputerMove(currentGame);
-        _repository.Save(currentGame);
+        if (isTwoPlayerGame)
+        {
+            if (currentGame.CurrentPlayerId == currentGame.Player1Id)
+            {
+                currentGame.CurrentPlayerId = currentGame.Player2Id;
+            }
+            else
+            {
+                currentGame.CurrentPlayerId = currentGame.Player1Id;
+            }
 
-        var finalStatus = _gameService.CheckGameEnd(currentGame);
-        return Ok(GameMapper.ToResponse(currentGame, finalStatus));
+            _repository.Save(currentGame);
+            return Ok(GameMapper.ToResponse(currentGame, gameStatus));
+        }
+        else
+        {
+            _gameService.MakeComputerMove(currentGame);
+            _repository.Save(currentGame);
+
+            var finalStatus = _gameService.CheckGameEnd(currentGame);
+            return Ok(GameMapper.ToResponse(currentGame, finalStatus));
+        }
     }
 
     private bool TryGetUserId(out Guid userId)

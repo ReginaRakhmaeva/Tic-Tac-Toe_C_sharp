@@ -3,28 +3,26 @@ using Tic_Tac_Toe.datasource.model;
 
 namespace Tic_Tac_Toe.datasource.mapper;
 
-/// Маппер для преобразования Move между domain и datasource слоями
 public static class MoveMapper
 {
-    /// Преобразование из domain в datasource
-    public static MoveDto ToDto(Move domain)
+    public static MoveDto ToDto(Move domain, Guid gameId)
     {
         if (domain == null)
         {
             throw new ArgumentNullException(nameof(domain));
         }
-
-        return new MoveDto(domain.Row, domain.Col, domain.Player);
+        return new MoveDto(domain.Row, domain.Col, domain.Player)
+        {
+            GameId = gameId
+        };
     }
 
-    /// Преобразование из datasource в domain
     public static Move ToDomain(MoveDto dto)
     {
         if (dto == null)
         {
             throw new ArgumentNullException(nameof(dto));
         }
-
         return new Move(dto.Row, dto.Col, dto.Player);
     }
 }

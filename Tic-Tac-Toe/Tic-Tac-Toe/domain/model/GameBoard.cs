@@ -1,7 +1,5 @@
 namespace Tic_Tac_Toe.domain.model;
 
-/// Модель игрового поля в виде целочисленной матрицы 3x3.
-/// 0 - пустая клетка, 1 - крестик (X), 2 - нолик (O)
 public class GameBoard
 {
     private readonly int[,] _board = new int[3, 3];
@@ -12,7 +10,6 @@ public class GameBoard
 
     public GameBoard()
     {
-        // Инициализация пустого поля
         for (int i = 0; i < 3; i++)
         {
             for (int j = 0; j < 3; j++)
@@ -38,7 +35,6 @@ public class GameBoard
         }
     }
 
-    /// Индексатор для доступа к элементам поля
     public int this[int row, int col]
     {
         get
@@ -53,8 +49,6 @@ public class GameBoard
         }
     }
 
-    
-    /// Получить копию текущего состояния поля
     public int[,] GetBoard()
     {
         int[,] copy = new int[3, 3];
@@ -67,9 +61,7 @@ public class GameBoard
         }
         return copy;
     }
-
     
-    /// Проверка, является ли клетка пустой
     public bool IsEmpty(int row, int col)
     {
         ValidateIndex(row, col);
@@ -77,7 +69,6 @@ public class GameBoard
     }
 
     
-    /// Проверка валидности индексов
     private void ValidateIndex(int row, int col)
     {
         if (row < 0 || row >= 3 || col < 0 || col >= 3)
@@ -86,8 +77,6 @@ public class GameBoard
         }
     }
 
-    
-    /// Создать копию игрового поля
     public GameBoard Clone()
     {
         return new GameBoard(_board);

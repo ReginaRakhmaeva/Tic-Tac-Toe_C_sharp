@@ -15,13 +15,27 @@
         <p>Для игры необходимо <a href="/Login">войти в систему</a></p>
     </div>
     
-    <div class="game-container">
+    <!-- Меню выбора типа игры -->
+    <div id="gameModeSelection" class="game-mode-selection mb-4">
+        <h3 class="mb-3">Выберите режим игры</h3>
+        <div class="d-flex justify-content-center gap-3">
+            <button id="computerModeBtn" class="btn btn-primary btn-lg">
+                Играть с компьютером
+            </button>
+            <button id="playerModeBtn" class="btn btn-success btn-lg">
+                Играть с игроком
+            </button>
+        </div>
+    </div>
+
+    <!-- Режим игры с компьютером -->
+    <div id="computerGameContainer" class="game-container" style="display: none;">
         <div class="game-info mb-3">
-            <p id="gameStatus" class="lead">Ваш ход (X)</p>
+            <p id="gameStatus" class="lead">Выберите, кто начинает игру</p>
             <p id="gameId" class="text-muted small" style="display: none;"></p>
         </div>
 
-        <div class="game-board mb-4" id="gameBoard">
+        <div class="game-board mb-4" id="gameBoard" style="display: none;">
             <div class="row g-0">
                 <div class="col-4 cell" data-row="0" data-col="0"></div>
                 <div class="col-4 cell" data-row="0" data-col="1"></div>
@@ -42,9 +56,60 @@
         <div class="game-controls">
             <button id="startFirstBtn" class="btn btn-primary btn-lg me-2">Начинает игрок</button>
             <button id="startSecondBtn" class="btn btn-success btn-lg me-2">Начинает компьютер</button>
+            <button id="backToMenuBtn" class="btn btn-secondary btn-lg">Назад к меню</button>
         </div>
 
         <div id="errorMessage" class="alert alert-danger mt-3" style="display: none;"></div>
+    </div>
+
+    <!-- Режим игры с игроком -->
+    <div id="playerGameContainer" class="player-game-container" style="display: none;">
+        <div class="d-flex justify-content-center gap-3 mb-4">
+            <button id="createGameBtn" class="btn btn-primary btn-lg">
+                Создать игру
+            </button>
+            <button id="refreshGamesBtn" class="btn btn-secondary btn-lg">
+                Обновить список
+            </button>
+            <button id="backToMenuBtn2" class="btn btn-secondary btn-lg">Назад к меню</button>
+        </div>
+
+        <div id="availableGamesList" class="available-games-list">
+            <h4 class="mb-3">Доступные игры</h4>
+            <div id="gamesList" class="list-group">
+                <p class="text-muted">Загрузка...</p>
+            </div>
+        </div>
+
+        <!-- Игровое поле для PvP -->
+        <div id="playerGameBoard" class="game-container mt-4" style="display: none;">
+            <div class="game-info mb-3">
+                <p id="playerGameStatus" class="lead">Ожидание хода...</p>
+                <p id="playerGameId" class="text-muted small"></p>
+                <p id="playerInfo" class="text-muted small"></p>
+                <button id="leaveGameBtn" class="btn btn-danger btn-sm mt-2">Выйти из игры</button>
+            </div>
+
+            <div class="game-board mb-4" id="playerGameBoardElement">
+                <div class="row g-0">
+                    <div class="col-4 cell" data-row="0" data-col="0"></div>
+                    <div class="col-4 cell" data-row="0" data-col="1"></div>
+                    <div class="col-4 cell" data-row="0" data-col="2"></div>
+                </div>
+                <div class="row g-0">
+                    <div class="col-4 cell" data-row="1" data-col="0"></div>
+                    <div class="col-4 cell" data-row="1" data-col="1"></div>
+                    <div class="col-4 cell" data-row="1" data-col="2"></div>
+                </div>
+                <div class="row g-0">
+                    <div class="col-4 cell" data-row="2" data-col="0"></div>
+                    <div class="col-4 cell" data-row="2" data-col="1"></div>
+                    <div class="col-4 cell" data-row="2" data-col="2"></div>
+                </div>
+            </div>
+
+            <div id="playerGameErrorMessage" class="alert alert-danger mt-3" style="display: none;"></div>
+        </div>
     </div>
 </div>
 

@@ -7,18 +7,15 @@ namespace Tic_Tac_Toe.datasource.model;
 [Table("Users")]
 public class UserDto
 {
-    /// Уникальный идентификатор пользователя (UUID)
     [Key]
     [Column("id")]
     public Guid Id { get; set; }
 
-    /// Логин пользователя
     [Required]
     [Column("login")]
     [MaxLength(255)]
     public string Login { get; set; }
 
-    /// Пароль пользователя
     [Required]
     [Column("password")]
     [MaxLength(255)]

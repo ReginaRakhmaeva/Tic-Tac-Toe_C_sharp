@@ -3,35 +3,51 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Tic_Tac_Toe.datasource.model;
 
-/// Модель текущей игры для хранения в datasource слое
 [Table("Games")]
 public class GameDto
 {
-    /// Уникальный идентификатор игры (UUID)
     [Key]
     [Column("id")]
     public Guid Id { get; set; }
 
-    /// Идентификатор пользователя, владельца игры
     [Required]
     [Column("user_id")]
     public Guid UserId { get; set; }
 
-    /// Игровое поле
+    [Required]
+    [Column("game_type")]
+    public int GameType { get; set; }
+
+    [Column("player1_id")]
+    public Guid? Player1Id { get; set; }
+
+    
+    [Column("player2_id")]
+    public Guid? Player2Id { get; set; }
+
+    [Column("current_player_id")]
+    public Guid? CurrentPlayerId { get; set; }
+
+    [Column("winner_id")]
+    public Guid? WinnerId { get; set; }
+
     [Required]
     [Column("board", TypeName = "jsonb")]
     public GameBoardDto Board { get; set; }
 
-    /// История ходов (сериализуемая версия)
-    [Column("move_history")]
-    public List<MoveDto> MoveHistory { get; set; }
+    public List<MoveDto> Moves { get; set; }
 
     public GameDto()
     {
         Id = Guid.NewGuid();
         UserId = Guid.Empty;
+        GameType = 0; // Computer
+        Player1Id = null;
+        Player2Id = null;
+        CurrentPlayerId = null;
+        WinnerId = null;
         Board = new GameBoardDto();
-        MoveHistory = new List<MoveDto>();
+        Moves = new List<MoveDto>();
     }
 }
 

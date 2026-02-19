@@ -53,7 +53,6 @@ public class AuthService : IAuthService
             byte[] credentialBytes = Convert.FromBase64String(base64Credentials);
             string credentials = Encoding.UTF8.GetString(credentialBytes);
 
-            // Разделяем логин и пароль
             int separatorIndex = credentials.IndexOf(':');
             if (separatorIndex < 0)
             {
@@ -63,14 +62,12 @@ public class AuthService : IAuthService
             string login = credentials.Substring(0, separatorIndex);
             string password = credentials.Substring(separatorIndex + 1);
 
-            // Получаем пользователя по логину
             var user = _userService.GetUserByLogin(login);
             if (user == null)
             {
                 return null;
             }
 
-            // Проверяем пароль
             if (!_userService.VerifyPassword(user, password))
             {
                 return null;
@@ -80,7 +77,6 @@ public class AuthService : IAuthService
         }
         catch (FormatException)
         {
-            // Некорректный base64
             return null;
         }
         catch (Exception)

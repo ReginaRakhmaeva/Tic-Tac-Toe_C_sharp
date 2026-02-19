@@ -6,20 +6,19 @@ public class GameResponse
 
     public GameBoardResponse Board { get; set; }
 
-    /// Статус игры: "InProgress", "PlayerXWins", "PlayerOWins", "Draw", "WaitingForPlayers", "PlayerTurn", "PlayerWins"
     public string Status { get; set; }
 
-    /// Идентификатор первого игрока (играет за X)
     public Guid? Player1Id { get; set; }
 
-    /// Идентификатор второго игрока (играет за O)
     public Guid? Player2Id { get; set; }
 
-    /// Идентификатор текущего игрока, чей сейчас ход (используется при Status = "PlayerTurn")
     public Guid? CurrentPlayerId { get; set; }
 
-    /// Идентификатор победителя (используется при Status = "PlayerWins")
     public Guid? WinnerId { get; set; }
+
+    public string Player1Symbol { get; set; }
+
+    public string Player2Symbol { get; set; }
 
     public GameResponse()
     {
@@ -30,5 +29,7 @@ public class GameResponse
         Player2Id = null;
         CurrentPlayerId = null;
         WinnerId = null;
+        Player1Symbol = "X";
+        Player2Symbol = "O";
     }
 }

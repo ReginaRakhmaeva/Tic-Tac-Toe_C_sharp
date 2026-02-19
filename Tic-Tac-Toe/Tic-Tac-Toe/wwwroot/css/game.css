@@ -3,6 +3,35 @@
     margin: 0 auto;
 }
 
+.game-mode-selection {
+    margin: 40px 0;
+}
+
+.game-mode-selection button {
+    min-width: 200px;
+    padding: 20px;
+    font-size: 18px;
+}
+
+.player-game-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.available-games-list {
+    margin-top: 30px;
+}
+
+.available-games-list .list-group {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.available-games-list .list-group-item {
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
 .game-board {
     border: 3px solid #333;
     border-radius: 10px;
@@ -28,6 +57,12 @@
     background-color: #f0f0f0;
 }
 
+.cell:disabled,
+.cell.disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
 .cell.x {
     color: #007bff;
 }
@@ -41,5 +76,5 @@
 }
 
 .game-controls button {
-    margin: 0 10px;
+    margin: 10px 10px;
 }

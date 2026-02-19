@@ -30,6 +30,9 @@ public static class GameMapper
             throw new ArgumentNullException(nameof(domain));
         }
 
+        string player1Symbol = "X";
+        string player2Symbol = "O";
+
         return new GameResponse
         {
             Id = domain.Id,
@@ -38,7 +41,9 @@ public static class GameMapper
             Player1Id = domain.Player1Id,
             Player2Id = domain.Player2Id,
             CurrentPlayerId = domain.CurrentPlayerId,
-            WinnerId = domain.WinnerId
+            WinnerId = domain.WinnerId,
+            Player1Symbol = player1Symbol,
+            Player2Symbol = player2Symbol
         };
     }
 }

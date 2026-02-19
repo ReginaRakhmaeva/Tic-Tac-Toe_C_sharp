@@ -3,7 +3,6 @@ using Tic_Tac_Toe.datasource.repository;
 
 namespace Tic_Tac_Toe.domain.service;
 
-/// Реализация сервиса для работы с пользователями
 public class UserService : IUserService
 {
     private readonly IUserRepository _repository;
@@ -72,7 +71,6 @@ public class UserService : IUserService
         {
             return false;
         }
-        // TODO: возможно нужно хэширование
         return user.Password == password;
     }
 }

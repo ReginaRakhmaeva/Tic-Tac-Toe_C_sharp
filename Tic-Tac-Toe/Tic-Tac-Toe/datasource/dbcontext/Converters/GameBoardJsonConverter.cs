@@ -3,10 +3,8 @@ using Tic_Tac_Toe.datasource.model;
 
 namespace Tic_Tac_Toe.datasource.dbcontext.Converters;
 
-/// Конвертер для сериализации/десериализации GameBoardDto в JSON
 public static class GameBoardJsonConverter
 {
-    /// Сериализует GameBoardDto в JSON строку
     public static string Serialize(GameBoardDto? board)
     {
         if (board == null || board.Board == null)
@@ -28,7 +26,6 @@ public static class GameBoardJsonConverter
         return JsonSerializer.Serialize(wrapper);
     }
 
-    /// Десериализует JSON строку в GameBoardDto
     public static GameBoardDto Deserialize(string json)
     {
         if (string.IsNullOrWhiteSpace(json))
