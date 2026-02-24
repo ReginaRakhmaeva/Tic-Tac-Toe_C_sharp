@@ -13,7 +13,11 @@ public static class Configuration
     {
         services.AddScoped<IGameRepository, GameRepository>();
 
-        services.AddScoped<IGameService, GameServiceDataSource>();
+        // Domain service
+        services.AddScoped<IGameService, GameService>();
+
+        // Datasource service (расширенный интерфейс с персистентностью)
+        services.AddScoped<IGameServiceDataSource, GameServiceDataSource>();
 
         services.AddScoped<IUserRepository, UserRepository>();
 

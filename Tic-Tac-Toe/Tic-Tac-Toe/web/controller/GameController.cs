@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Tic_Tac_Toe.domain.model;
-using Tic_Tac_Toe.domain.service;
-using Tic_Tac_Toe.datasource.repository;
+using Tic_Tac_Toe.datasource.service;
 using Tic_Tac_Toe.web.model;
 using Tic_Tac_Toe.web.mapper;
 using System.Linq;
@@ -13,13 +12,11 @@ namespace Tic_Tac_Toe.web.controller;
 [Route("game")]
 public class GameController : ControllerBase
 {
-    private readonly IGameService _gameService;
-    private readonly IGameRepository _repository;
+    private readonly IGameServiceDataSource _gameService;
 
-    public GameController(IGameService gameService, IGameRepository repository)
+    public GameController(IGameServiceDataSource gameService)
     {
         _gameService = gameService ?? throw new ArgumentNullException(nameof(gameService));
-        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
     /// Получение доступных игр (ожидающих второго игрока)
@@ -31,7 +28,7 @@ public class GameController : ControllerBase
             return Unauthorized(new ErrorResponse("User ID not found in authorization context"));
         }
 
-        var availableGames = _repository.GetAvailableGames();
+        var availableGames = _gameService.GetAvailableGames();
         
         var gamesForUser = availableGames
             .Where(g => g.Player1Id != userId)
@@ -55,7 +52,7 @@ public class GameController : ControllerBase
             return Unauthorized(new ErrorResponse("User ID not found in authorization context"));
         }
 
-        var game = _repository.Get(id);
+        var game = _gameService.GetGame(id);
         
         if (game == null)
         {
@@ -80,7 +77,7 @@ public class GameController : ControllerBase
         game.Player2Id = userId;
         game.CurrentPlayerId = game.Player1Id;
 
-        _repository.Save(game);
+        _gameService.SaveGame(game);
 
         var gameStatus = GameStatus.PlayerTurn;
         var response = GameMapper.ToResponse(game, gameStatus);
@@ -96,7 +93,7 @@ public class GameController : ControllerBase
             return Unauthorized(new ErrorResponse("User ID not found in authorization context"));
         }
 
-        var currentGame = _repository.Get(id);
+        var currentGame = _gameService.GetGame(id);
         
         if (currentGame == null)
         {
@@ -153,7 +150,7 @@ public class GameController : ControllerBase
         
         if (gameType == "player")
         {
-            _repository.DeleteInactiveGamesByPlayer1Id(userId);
+            _gameService.DeleteInactiveGamesByPlayer1Id(userId);
         }
         
         var gameId = Guid.NewGuid();
@@ -181,7 +178,7 @@ public class GameController : ControllerBase
                 };
 
                 var gameStatus = GameStatus.PlayerTurn;
-                _repository.Save(newGame);
+                _gameService.SaveGame(newGame);
                 var response = GameMapper.ToResponse(newGame, gameStatus);
                 return CreatedAtAction(nameof(GetGame), new { id = gameId }, response);
             }
@@ -200,7 +197,7 @@ public class GameController : ControllerBase
                 };
 
                 var gameStatus = GameStatus.WaitingForPlayers;
-                _repository.Save(newGame);
+                _gameService.SaveGame(newGame);
                 var response = GameMapper.ToResponse(newGame, gameStatus);
                 return CreatedAtAction(nameof(GetGame), new { id = gameId }, response);
             }
@@ -224,7 +221,7 @@ public class GameController : ControllerBase
                 _gameService.MakeComputerMove(newGame);
             }
 
-            _repository.Save(newGame);
+            _gameService.SaveGame(newGame);
             var gameStatus = _gameService.CheckGameEnd(newGame);
             var response = GameMapper.ToResponse(newGame, gameStatus);
             return CreatedAtAction(nameof(GetGame), new { id = gameId }, response);
@@ -240,7 +237,7 @@ public class GameController : ControllerBase
             return Unauthorized(new ErrorResponse("User ID not found in authorization context"));
         }
 
-        var game = _repository.Get(id);
+        var game = _gameService.GetGame(id);
         
         if (game == null)
         {
@@ -264,14 +261,14 @@ public class GameController : ControllerBase
 
         if (canDelete)
         {
-            _repository.Delete(id);
+            _gameService.DeleteGame(id);
             return Ok(new { message = "Game deleted successfully" });
         }
         else
         {
             if (isSecondPlayer)
             {
-                _repository.Delete(id);
+                _gameService.DeleteGame(id);
                 return Ok(new { message = "Game deleted successfully" });
             }
             else if (isCreator)
@@ -280,7 +277,7 @@ public class GameController : ControllerBase
                 
                 game.CurrentPlayerId = null;
                 
-                _repository.Save(game);
+                _gameService.SaveGame(game);
                 return Ok(new { message = "Left the game" });
             }
         }
@@ -297,7 +294,7 @@ public class GameController : ControllerBase
             return Unauthorized(new ErrorResponse("User ID not found in authorization context"));
         }
 
-        var game = _repository.Get(id);
+        var game = _gameService.GetGame(id);
         
         if (game == null)
         {
@@ -317,7 +314,7 @@ public class GameController : ControllerBase
             return BadRequest(new ErrorResponse("Cannot delete game that has already started"));
         }
 
-        _repository.Delete(id);
+        _gameService.DeleteGame(id);
         return NoContent();
     }
 
@@ -354,7 +351,7 @@ public class GameController : ControllerBase
             return BadRequest(new ErrorResponse("Invalid game data", ex.Message));
         }
 
-        var currentGame = _repository.Get(id);
+        var currentGame = _gameService.GetGame(id);
         
         if (currentGame == null)
         {
@@ -401,7 +398,7 @@ public class GameController : ControllerBase
         
         if (isGameFinished)
         {
-            _repository.Save(currentGame);
+            _gameService.SaveGame(currentGame);
             return Ok(GameMapper.ToResponse(currentGame, gameStatus));
         }
 
@@ -416,13 +413,13 @@ public class GameController : ControllerBase
                 currentGame.CurrentPlayerId = currentGame.Player1Id;
             }
 
-            _repository.Save(currentGame);
+            _gameService.SaveGame(currentGame);
             return Ok(GameMapper.ToResponse(currentGame, gameStatus));
         }
         else
         {
             _gameService.MakeComputerMove(currentGame);
-            _repository.Save(currentGame);
+            _gameService.SaveGame(currentGame);
 
             var finalStatus = _gameService.CheckGameEnd(currentGame);
             return Ok(GameMapper.ToResponse(currentGame, finalStatus));
