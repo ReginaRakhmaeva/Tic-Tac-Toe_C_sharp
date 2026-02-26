@@ -10,5 +10,6 @@ public interface IGameRepository
     void Delete(Guid id);
     List<Game> GetInactiveGamesByPlayer1Id(Guid player1Id);
     void DeleteInactiveGamesByPlayer1Id(Guid player1Id);
+    List<Game> GetGamesByUserId(Guid userId);
 }
 

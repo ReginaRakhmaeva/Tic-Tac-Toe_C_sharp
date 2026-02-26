@@ -48,6 +48,7 @@ public class ApplicationDbContext : DbContext
             entity.Property(e => e.Player2Id).HasColumnName("player2_id");
             entity.Property(e => e.CurrentPlayerId).HasColumnName("current_player_id");
             entity.Property(e => e.WinnerId).HasColumnName("winner_id");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.Board)
                 .HasColumnName("board")
                 .HasColumnType("jsonb")

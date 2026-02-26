@@ -36,6 +36,7 @@ function showGameModeSelection() {
     document.getElementById('gameModeSelection').style.display = 'block';
     document.getElementById('computerGameContainer').style.display = 'none';
     document.getElementById('playerGameContainer').style.display = 'none';
+    document.getElementById('historyContainer').style.display = 'none';
     gameMode = null;
     currentGameId = null;
     if (refreshInterval) {
@@ -52,6 +53,7 @@ function showComputerMode() {
     document.getElementById('gameModeSelection').style.display = 'none';
     document.getElementById('computerGameContainer').style.display = 'block';
     document.getElementById('playerGameContainer').style.display = 'none';
+    document.getElementById('historyContainer').style.display = 'none';
     gameMode = 'computer';
     currentGameId = null;
     gameBoard = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
@@ -70,6 +72,7 @@ function showPlayerMode() {
     document.getElementById('gameModeSelection').style.display = 'none';
     document.getElementById('computerGameContainer').style.display = 'none';
     document.getElementById('playerGameContainer').style.display = 'block';
+    document.getElementById('historyContainer').style.display = 'none';
     document.getElementById('playerGameBoard').style.display = 'none';
     document.getElementById('availableGamesList').style.display = 'block'; // Показываем список
     
@@ -84,6 +87,22 @@ function showPlayerMode() {
         refreshInterval = null;
     }
     loadAvailableGames();
+}
+
+function showHistoryMode() {
+    document.getElementById('gameModeSelection').style.display = 'none';
+    document.getElementById('computerGameContainer').style.display = 'none';
+    document.getElementById('playerGameContainer').style.display = 'none';
+    document.getElementById('historyContainer').style.display = 'block';
+    
+    gameMode = 'history';
+    currentGameId = null;
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+    }
+    
+    loadGameHistory();
 }
 
 async function loadAvailableGames() {
@@ -961,6 +980,146 @@ async function leavePlayerGame() {
     }
 }
 
+async function loadGameHistory() {
+    const historyList = document.getElementById('historyList');
+    const errorMessage = document.getElementById('historyErrorMessage');
+    
+    try {
+        historyList.innerHTML = '<div class="text-center"><p class="text-muted">Загрузка истории игр...</p></div>';
+        errorMessage.style.display = 'none';
+        
+        const response = await fetch('/game/history', {
+            method: 'GET',
+            headers: getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                alert('Сессия истекла. Пожалуйста, войдите снова.');
+                window.location.href = '/Login';
+                return;
+            }
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Ошибка при загрузке истории игр');
+        }
+
+        const games = await response.json();
+        renderGameHistory(games);
+    } catch (error) {
+        console.error('Ошибка при загрузке истории:', error);
+        errorMessage.textContent = 'Ошибка при загрузке истории игр: ' + error.message;
+        errorMessage.style.display = 'block';
+        historyList.innerHTML = '<div class="text-center"><p class="text-danger">Не удалось загрузить историю игр</p></div>';
+    }
+}
+
+function renderGameHistory(games) {
+    const historyList = document.getElementById('historyList');
+    
+    if (!games || games.length === 0) {
+        historyList.innerHTML = '<div class="text-center"><p class="text-muted">У вас пока нет завершенных игр</p></div>';
+        return;
+    }
+
+    const userId = localStorage.getItem('userId');
+    
+    const gamesHtml = games.map(game => {
+        const createdAt = new Date(game.createdAt);
+        const dateStr = createdAt.toLocaleDateString('ru-RU', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        let resultText = '';
+        let resultClass = '';
+        
+        if (game.status === 'Draw') {
+            resultText = 'Ничья';
+            resultClass = 'text-warning';
+        } else if (game.status === 'PlayerWins') {
+            if (game.winnerId && String(game.winnerId) === String(userId)) {
+                resultText = 'Победа';
+                resultClass = 'text-success fw-bold';
+            } else {
+                resultText = 'Поражение';
+                resultClass = 'text-danger';
+            }
+        } else {
+            resultText = game.status;
+            resultClass = 'text-secondary';
+        }
+        
+        const gameTypeText = game.gameType === 1 ? 'С игроком' : 'С компьютером';
+        
+        // Формируем мини-доску для визуализации
+        const boardHtml = renderHistoryBoard(game.board);
+        
+        return `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5 class="card-title">
+                                <span class="${resultClass}">${resultText}</span>
+                                <small class="text-muted ms-2">${gameTypeText}</small>
+                            </h5>
+                            <p class="card-text">
+                                <small class="text-muted">Дата: ${dateStr}</small>
+                            </p>
+                            <p class="card-text">
+                                <small>ID игры: ${game.id.substring(0, 8)}...</small>
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            ${boardHtml}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    historyList.innerHTML = gamesHtml;
+}
+
+function renderHistoryBoard(board) {
+    if (!board || !board.Board || !Array.isArray(board.Board)) {
+        return '<p class="text-muted small">Доска недоступна</p>';
+    }
+    
+    const boardArray = board.Board;
+    let html = '<div class="history-board" style="display: inline-block; border: 2px solid #333; padding: 5px; background: #f8f9fa;">';
+    
+    for (let i = 0; i < 3; i++) {
+        html += '<div style="display: flex;">';
+        for (let j = 0; j < 3; j++) {
+            const cellValue = boardArray[i] && boardArray[i][j] ? boardArray[i][j] : 0;
+            let cellContent = '';
+            let cellClass = '';
+            
+            if (cellValue === 1) {
+                cellContent = 'X';
+                cellClass = 'text-primary';
+            } else if (cellValue === 2) {
+                cellContent = 'O';
+                cellClass = 'text-danger';
+            } else {
+                cellContent = '·';
+                cellClass = 'text-muted';
+            }
+            
+            html += `<div style="width: 30px; height: 30px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-weight: bold; background: white;" class="${cellClass}">${cellContent}</div>`;
+        }
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    return html;
+}
+
 function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         const r = Math.random() * 16 | 0;
@@ -1004,10 +1163,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Кнопки выбора режима
     document.getElementById('computerModeBtn').addEventListener('click', showComputerMode);
     document.getElementById('playerModeBtn').addEventListener('click', showPlayerMode);
+    document.getElementById('historyBtn').addEventListener('click', showHistoryMode);
     
     // Кнопки возврата в меню
     document.getElementById('backToMenuBtn').addEventListener('click', showGameModeSelection);
     document.getElementById('backToMenuBtn2').addEventListener('click', showGameModeSelection);
+    document.getElementById('backToMenuBtn3').addEventListener('click', showGameModeSelection);
+    
+    // Кнопка обновления истории
+    document.getElementById('refreshHistoryBtn').addEventListener('click', loadGameHistory);
     
     // Кнопки для игры с компьютером
     document.getElementById('startFirstBtn').addEventListener('click', function() {

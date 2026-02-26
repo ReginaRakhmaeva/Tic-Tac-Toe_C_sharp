@@ -16,4 +16,6 @@ public interface IGameServiceDataSource : IGameService
     List<Game> GetAvailableGames();
 
     void DeleteInactiveGamesByPlayer1Id(Guid player1Id);
+
+    List<Game> GetCompletedGamesByUserId(Guid userId);
 }

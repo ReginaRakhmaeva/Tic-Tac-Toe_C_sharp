@@ -221,8 +221,10 @@ public class GameController : ControllerBase
                 _gameService.MakeComputerMove(newGame);
             }
 
-            _gameService.SaveGame(newGame);
             var gameStatus = _gameService.CheckGameEnd(newGame);
+            
+            _gameService.SaveGame(newGame);
+            
             var response = GameMapper.ToResponse(newGame, gameStatus);
             return CreatedAtAction(nameof(GetGame), new { id = gameId }, response);
         }
@@ -316,6 +318,38 @@ public class GameController : ControllerBase
 
         _gameService.DeleteGame(id);
         return NoContent();
+    }
+
+    [HttpGet("history")]
+    public IActionResult GetCompletedGamesHistory()
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized(new ErrorResponse("User ID not found in authorization context"));
+        }
+
+        var games = _gameService.GetCompletedGamesByUserId(userId);
+
+        var responses = games.Select(game =>
+        {
+            GameStatus status;
+            if (game.WinnerId == null)
+            {
+                status = GameStatus.Draw;
+            }
+            else if (game.WinnerId == userId)
+            {
+                status = GameStatus.PlayerWins;
+            }
+            else
+            {
+                status = GameStatus.PlayerWins; 
+            }
+            
+            return GameMapper.ToResponse(game, status);
+        }).ToList();
+
+        return Ok(responses);
     }
 
     [HttpPost("{id}")]
@@ -419,9 +453,11 @@ public class GameController : ControllerBase
         else
         {
             _gameService.MakeComputerMove(currentGame);
-            _gameService.SaveGame(currentGame);
-
+            
             var finalStatus = _gameService.CheckGameEnd(currentGame);
+
+            _gameService.SaveGame(currentGame);
+            
             return Ok(GameMapper.ToResponse(currentGame, finalStatus));
         }
     }

@@ -36,12 +36,14 @@ public static class GameMapper
         return new GameResponse
         {
             Id = domain.Id,
+            CreatedAt = domain.CreatedAt,
             Board = GameBoardMapper.ToResponse(domain.Board),
             Status = status?.ToString() ?? "InProgress",
             Player1Id = domain.Player1Id,
             Player2Id = domain.Player2Id,
             CurrentPlayerId = domain.CurrentPlayerId,
             WinnerId = domain.WinnerId,
+            GameType = (int)domain.GameType,
             Player1Symbol = player1Symbol,
             Player2Symbol = player2Symbol
         };

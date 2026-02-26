@@ -21,6 +21,7 @@ public static class GameMapper
             Player2Id = domain.Player2Id,
             CurrentPlayerId = domain.CurrentPlayerId,
             WinnerId = domain.WinnerId,
+            CreatedAt = domain.CreatedAt,
             Board = GameBoardMapper.ToDto(domain.Board),
             Moves = domain.MoveHistory?.Select(m => MoveMapper.ToDto(m, domain.Id)).ToList() ?? new List<MoveDto>()
         };
@@ -44,6 +45,7 @@ public static class GameMapper
             Player2Id = dto.Player2Id,
             CurrentPlayerId = dto.CurrentPlayerId,
             WinnerId = dto.WinnerId,
+            CreatedAt = dto.CreatedAt,
             Board = GameBoardMapper.ToDomain(dto.Board),
             MoveHistory = dto.Moves?.Select(m => MoveMapper.ToDomain(m)).ToList() ?? new List<Move>()
         };

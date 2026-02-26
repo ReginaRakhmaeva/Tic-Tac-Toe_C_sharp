@@ -16,6 +16,8 @@ public class Game
 
     public Guid? WinnerId { get; set; }
 
+    public DateTime CreatedAt { get; set; }
+
     public GameBoard Board { get; set; }
 
     public List<Move> MoveHistory { get; set; }
@@ -29,6 +31,7 @@ public class Game
         Player2Id = null;
         CurrentPlayerId = null;
         WinnerId = null;
+        CreatedAt = DateTime.UtcNow;
         Board = new GameBoard();
         MoveHistory = new List<Move>();
     }
@@ -42,6 +45,7 @@ public class Game
         Player2Id = null;
         CurrentPlayerId = null;
         WinnerId = null;
+        CreatedAt = DateTime.UtcNow;
         Board = board ?? new GameBoard();
         MoveHistory = new List<Move>();
     }
@@ -55,6 +59,7 @@ public class Game
         Player2Id = null;
         CurrentPlayerId = null;
         WinnerId = null;
+        CreatedAt = DateTime.UtcNow;
         Board = board ?? new GameBoard();
         MoveHistory = new List<Move>();
     }

@@ -81,5 +81,28 @@ public class GameServiceDataSource : IGameServiceDataSource
     {
         _repository.DeleteInactiveGamesByPlayer1Id(player1Id);
     }
+
+
+    public List<Game> GetCompletedGamesByUserId(Guid userId)
+    {
+        var games = _repository.GetGamesByUserId(userId);
+        var completedGames = new List<Game>();
+
+        foreach (var game in games)
+        {
+            var status = _domainService.CheckGameEnd(game);
+
+            bool isGameFinished = status == GameStatus.PlayerWins || status == GameStatus.Draw;
+
+            if (isGameFinished)
+            {
+                completedGames.Add(game);
+            }
+        }
+
+        return completedGames
+            .OrderByDescending(g => g.CreatedAt)
+            .ToList();
+    }
 }
 

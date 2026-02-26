@@ -211,7 +211,7 @@ public class GameService : IGameService
             }
             else
             {
-                game.WinnerId = GameConstants.ComputerId;
+                game.WinnerId = game.Player2Id ?? GameConstants.ComputerId;
             }
             return GameStatus.PlayerWins;
         }

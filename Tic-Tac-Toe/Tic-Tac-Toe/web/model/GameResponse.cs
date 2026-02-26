@@ -4,6 +4,8 @@ public class GameResponse
 {
     public Guid Id { get; set; }
 
+    public DateTime CreatedAt { get; set; }
+
     public GameBoardResponse Board { get; set; }
 
     public string Status { get; set; }
@@ -16,6 +18,8 @@ public class GameResponse
 
     public Guid? WinnerId { get; set; }
 
+    public int GameType { get; set; }
+
     public string Player1Symbol { get; set; }
 
     public string Player2Symbol { get; set; }
@@ -23,13 +27,15 @@ public class GameResponse
     public GameResponse()
     {
         Id = Guid.Empty;
+        CreatedAt = DateTime.UtcNow;
         Board = new GameBoardResponse();
         Status = "InProgress";
         Player1Id = null;
         Player2Id = null;
-        CurrentPlayerId = null;
-        WinnerId = null;
-        Player1Symbol = "X";
-        Player2Symbol = "O";
+            CurrentPlayerId = null;
+            WinnerId = null;
+            GameType = 0;
+            Player1Symbol = "X";
+            Player2Symbol = "O";
     }
 }

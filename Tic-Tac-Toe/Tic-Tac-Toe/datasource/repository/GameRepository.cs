@@ -188,5 +188,18 @@ public class GameRepository : IGameRepository
             throw;
         }
     }
+
+    /// Получить все игры, в которых участвует указанный пользователь.
+    public List<Game> GetGamesByUserId(Guid userId)
+    {
+        var gameDtos = _context.Games
+            .Include(g => g.Moves)
+            .Where(g => g.UserId == userId ||
+                        g.Player1Id == userId ||
+                        g.Player2Id == userId)
+            .ToList();
+
+        return gameDtos.Select(g => GameMapper.ToDomain(g)).ToList();
+    }
 }
 

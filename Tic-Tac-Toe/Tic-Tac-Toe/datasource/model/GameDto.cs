@@ -32,6 +32,10 @@ public class GameDto
     public Guid? WinnerId { get; set; }
 
     [Required]
+    [Column("created_at")]
+    public DateTime CreatedAt { get; set; }
+
+    [Required]
     [Column("board", TypeName = "jsonb")]
     public GameBoardDto Board { get; set; }
 
@@ -46,6 +50,7 @@ public class GameDto
         Player2Id = null;
         CurrentPlayerId = null;
         WinnerId = null;
+        CreatedAt = DateTime.UtcNow;
         Board = new GameBoardDto();
         Moves = new List<MoveDto>();
     }
