@@ -2,31 +2,29 @@ let currentGameId = null;
 let gameBoard = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
 let isPlayerTurn = true;
 let gameFinished = false;
-let gameMode = null; // 'computer' or 'player'
-let currentPlayerSymbol = 1; // 1 = X, 2 = O
+let gameMode = null;
+let currentPlayerSymbol = 1;
 let currentPlayerId = null;
 let player1Id = null;
 let player2Id = null;
 let refreshInterval = null;
 
-// Получение заголовков авторизации
 function getAuthHeaders() {
     const headers = {
         'Content-Type': 'application/json'
     };
     
-    const authCredentials = localStorage.getItem('authCredentials');
-    if (authCredentials) {
-        headers['Authorization'] = 'Basic ' + authCredentials;
+    const accessToken = localStorage.getItem('accessToken');
+    if (accessToken) {
+        headers['Authorization'] = 'Bearer ' + accessToken;
     }
     
     return headers;
 }
 
-// Проверка авторизации
 function checkAuth() {
-    const authCredentials = localStorage.getItem('authCredentials');
-    if (!authCredentials) {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
         document.getElementById('authWarning').style.display = 'block';
         return false;
     }
@@ -34,7 +32,6 @@ function checkAuth() {
     return true;
 }
 
-// Показать меню выбора режима
 function showGameModeSelection() {
     document.getElementById('gameModeSelection').style.display = 'block';
     document.getElementById('computerGameContainer').style.display = 'none';
@@ -45,9 +42,12 @@ function showGameModeSelection() {
         clearInterval(refreshInterval);
         refreshInterval = null;
     }
+    
+    if (typeof showNavigation === 'function') {
+        showNavigation();
+    }
 }
 
-// Показать режим игры с компьютером
 function showComputerMode() {
     document.getElementById('gameModeSelection').style.display = 'none';
     document.getElementById('computerGameContainer').style.display = 'block';
@@ -56,19 +56,16 @@ function showComputerMode() {
     currentGameId = null;
     gameBoard = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
     
-    // Скрываем игровое поле до выбора кто начинает
     document.getElementById('gameBoard').style.display = 'none';
     document.getElementById('gameStatus').textContent = 'Выберите, кто начинает игру';
     document.getElementById('gameId').style.display = 'none';
     document.getElementById('errorMessage').style.display = 'none';
     
-    // Сбрасываем состояние игры
     isPlayerTurn = false;
     gameFinished = false;
     clearBoard('gameBoard');
 }
 
-// Показать режим игры с игроком
 function showPlayerMode() {
     document.getElementById('gameModeSelection').style.display = 'none';
     document.getElementById('computerGameContainer').style.display = 'none';
@@ -76,7 +73,6 @@ function showPlayerMode() {
     document.getElementById('playerGameBoard').style.display = 'none';
     document.getElementById('availableGamesList').style.display = 'block'; // Показываем список
     
-    // Показываем кнопки управления
     document.getElementById('createGameBtn').style.display = 'inline-block';
     document.getElementById('refreshGamesBtn').style.display = 'inline-block';
     document.getElementById('backToMenuBtn2').style.display = 'inline-block';
@@ -90,10 +86,8 @@ function showPlayerMode() {
     loadAvailableGames();
 }
 
-// Загрузка списка доступных игр
 async function loadAvailableGames() {
     try {
-        // Показываем список, если он был скрыт
         document.getElementById('availableGamesList').style.display = 'block';
         document.getElementById('playerGameBoard').style.display = 'none';
         
@@ -105,7 +99,10 @@ async function loadAvailableGames() {
         if (!response.ok) {
             if (response.status === 401) {
                 localStorage.removeItem('authCredentials');
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
                 localStorage.removeItem('userId');
+                localStorage.removeItem('userLogin');
                 if (typeof updateNavigation === 'function') {
                     updateNavigation();
                 }
@@ -124,7 +121,6 @@ async function loadAvailableGames() {
     }
 }
 
-// Отображение списка доступных игр
 function displayAvailableGames(games) {
     const gamesList = document.getElementById('gamesList');
     
@@ -147,7 +143,6 @@ function displayAvailableGames(games) {
     `).join('');
 }
 
-// Создание новой игры
 async function createPlayerGame() {
     try {
         const response = await fetch('/game', {
@@ -161,7 +156,10 @@ async function createPlayerGame() {
         if (!response.ok) {
             if (response.status === 401) {
                 localStorage.removeItem('authCredentials');
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
                 localStorage.removeItem('userId');
+                localStorage.removeItem('userLogin');
                 if (typeof updateNavigation === 'function') {
                     updateNavigation();
                 }
@@ -187,7 +185,7 @@ async function createPlayerGame() {
             
             // Устанавливаем правильный символ для создателя игры (Player1 = X)
             const userId = localStorage.getItem('userId');
-            if (userId && userId === player1Id) {
+            if (userId && String(userId) === String(player1Id)) {
                 currentPlayerSymbol = 1; // X
             }
             
@@ -206,6 +204,12 @@ async function createPlayerGame() {
             document.getElementById('createGameBtn').style.display = 'none';
             document.getElementById('refreshGamesBtn').style.display = 'none';
             document.getElementById('backToMenuBtn2').style.display = 'none';
+
+            // Скрываем навигацию (шапку) уже при создании игры,
+            // даже если второй игрок еще не присоединился
+            if (typeof hideNavigation === 'function') {
+                hideNavigation();
+            }
             
             // Убеждаемся, что обработчик события привязан к кнопке выхода
             const leaveGameBtn = document.getElementById('leaveGameBtn');
@@ -244,7 +248,10 @@ async function joinGame(gameId) {
         if (!response.ok) {
             if (response.status === 401) {
                 localStorage.removeItem('authCredentials');
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
                 localStorage.removeItem('userId');
+                localStorage.removeItem('userLogin');
                 if (typeof updateNavigation === 'function') {
                     updateNavigation();
                 }
@@ -271,9 +278,10 @@ function startPlayerGame(game) {
     
     const userId = localStorage.getItem('userId');
     if (userId) {
-        if (userId === player1Id) {
+        const userIdStr = String(userId);
+        if (userIdStr === String(player1Id)) {
             currentPlayerSymbol = 1; // X
-        } else if (userId === player2Id) {
+        } else if (userIdStr === String(player2Id)) {
             currentPlayerSymbol = 2; // O
         }
     }
@@ -294,6 +302,11 @@ function startPlayerGame(game) {
     document.getElementById('createGameBtn').style.display = 'none';
     document.getElementById('refreshGamesBtn').style.display = 'none';
     document.getElementById('backToMenuBtn2').style.display = 'none';
+    
+    // Скрываем навигацию во время игры с игроком
+    if (typeof hideNavigation === 'function') {
+        hideNavigation();
+    }
     
     // Убеждаемся, что обработчик события привязан к кнопке выхода
     const leaveGameBtn = document.getElementById('leaveGameBtn');
@@ -316,10 +329,38 @@ function startPlayerGame(game) {
 
 // Обновление информации об игре
 function updatePlayerGameInfo(game) {
-    const userId = localStorage.getItem('userId');
-    if (!userId) return;
+    let userId = localStorage.getItem('userId');
     
-    const isMyTurn = game.currentPlayerId && game.currentPlayerId === userId;
+    // Если userId нет, пытаемся извлечь из токена
+    if (!userId) {
+        const accessToken = localStorage.getItem('accessToken');
+        if (accessToken) {
+            try {
+                const parts = accessToken.split('.');
+                if (parts.length === 3) {
+                    const payloadJson = atob(parts[1]);
+                    const payload = JSON.parse(payloadJson);
+                    if (payload.uuid) {
+                        userId = payload.uuid;
+                        localStorage.setItem('userId', userId);
+                        console.log('UserId восстановлен из токена:', userId);
+                    }
+                }
+            } catch (e) {
+                console.error('Ошибка при извлечении userId из токена:', e);
+            }
+        }
+    }
+    
+    if (!userId) {
+        console.warn('UserId не найден, не могу определить статус игры');
+        return;
+    }
+    
+    // Преобразуем в строки для сравнения (на случай разных форматов GUID)
+    const currentPlayerIdStr = game.currentPlayerId ? String(game.currentPlayerId) : null;
+    const userIdStr = String(userId);
+    const isMyTurn = currentPlayerIdStr && currentPlayerIdStr === userIdStr;
     
     let statusText = '';
     if (game.status === 'WaitingForPlayers') {
@@ -332,7 +373,8 @@ function updatePlayerGameInfo(game) {
             statusText = isMyTurn ? 'Ваш ход!' : 'Ход соперника...';
         }
     } else if (game.status === 'PlayerWins') {
-        if (game.winnerId === userId) {
+        const winnerIdStr = game.winnerId ? String(game.winnerId) : null;
+        if (winnerIdStr === userIdStr) {
             statusText = 'Вы выиграли!';
         } else {
             statusText = 'Вы проиграли!';
@@ -347,9 +389,12 @@ function updatePlayerGameInfo(game) {
     document.getElementById('playerGameId').textContent = 'ID игры: ' + game.id.substring(0, 8);
     
     let playerInfo = '';
-    if (player1Id === userId) {
+    // Преобразуем в строки для сравнения
+    const player1IdStr = player1Id ? String(player1Id) : null;
+    const player2IdStr = player2Id ? String(player2Id) : null;
+    if (player1IdStr === userIdStr) {
         playerInfo = 'Вы играете за X';
-    } else if (player2Id === userId) {
+    } else if (player2IdStr === userIdStr) {
         playerInfo = 'Вы играете за O';
     }
     document.getElementById('playerInfo').textContent = playerInfo;
@@ -358,6 +403,27 @@ function updatePlayerGameInfo(game) {
 // Опрос состояния игры (для PvP)
 async function pollPlayerGame() {
     if (!currentGameId) return;
+    
+    // Восстанавливаем userId из токена, если его нет
+    let userId = localStorage.getItem('userId');
+    if (!userId) {
+        const accessToken = localStorage.getItem('accessToken');
+        if (accessToken) {
+            try {
+                const parts = accessToken.split('.');
+                if (parts.length === 3) {
+                    const payloadJson = atob(parts[1]);
+                    const payload = JSON.parse(payloadJson);
+                    if (payload.uuid) {
+                        userId = payload.uuid;
+                        localStorage.setItem('userId', userId);
+                    }
+                }
+            } catch (e) {
+                console.error('Ошибка при извлечении userId из токена:', e);
+            }
+        }
+    }
     
     try {
         const response = await fetch(`/game/${currentGameId}`, {
@@ -385,6 +451,10 @@ async function pollPlayerGame() {
                         document.getElementById('refreshGamesBtn').style.display = 'inline-block';
                         document.getElementById('backToMenuBtn2').style.display = 'inline-block';
                         currentGameId = null;
+                        // Показываем навигацию при выходе из игры
+                        if (typeof showNavigation === 'function') {
+                            showNavigation();
+                        }
                         loadAvailableGames();
                     }, 3000);
                 }
@@ -411,6 +481,10 @@ async function pollPlayerGame() {
                 document.getElementById('refreshGamesBtn').style.display = 'inline-block';
                 document.getElementById('backToMenuBtn2').style.display = 'inline-block';
                 currentGameId = null;
+                // Показываем навигацию при выходе из игры
+                if (typeof showNavigation === 'function') {
+                    showNavigation();
+                }
                 loadAvailableGames();
             }, 3000);
             return;
@@ -456,6 +530,10 @@ async function pollPlayerGame() {
                 player2Id = null;
                 currentPlayerId = null;
                 gameBoard = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+                // Показываем навигацию при завершении игры
+                if (typeof showNavigation === 'function') {
+                    showNavigation();
+                }
                 loadAvailableGames();
             }, 5000); // 5 секунд чтобы игроки увидели результат
         }
@@ -508,6 +586,11 @@ async function initializeGame(computerFirst) {
     
     clearBoard('gameBoard');
     
+    // Скрываем навигацию во время игры с компьютером
+    if (typeof hideNavigation === 'function') {
+        hideNavigation();
+    }
+    
     try {
         const response = await fetch('/game', {
             method: 'POST',
@@ -521,7 +604,10 @@ async function initializeGame(computerFirst) {
         if (!response.ok) {
             if (response.status === 401) {
                 localStorage.removeItem('authCredentials');
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
                 localStorage.removeItem('userId');
+                localStorage.removeItem('userLogin');
                 if (typeof updateNavigation === 'function') {
                     updateNavigation();
                 }
@@ -578,7 +664,10 @@ async function makeComputerMove() {
         if (!response.ok) {
             if (response.status === 401) {
                 localStorage.removeItem('authCredentials');
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
                 localStorage.removeItem('userId');
+                localStorage.removeItem('userLogin');
                 if (typeof updateNavigation === 'function') {
                     updateNavigation();
                 }
@@ -625,7 +714,9 @@ async function makePlayerMove() {
         const userId = localStorage.getItem('userId');
         if (!userId) return;
         
-        const isMyTurn = currentPlayerId && currentPlayerId === userId;
+        const userIdStr = String(userId);
+        const currentPlayerIdStr = currentPlayerId ? String(currentPlayerId) : null;
+        const isMyTurn = currentPlayerIdStr && currentPlayerIdStr === userIdStr;
         
         if (!isMyTurn) {
             return;
@@ -650,7 +741,10 @@ async function makePlayerMove() {
         if (!response.ok) {
             if (response.status === 401) {
                 localStorage.removeItem('authCredentials');
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
                 localStorage.removeItem('userId');
+                localStorage.removeItem('userLogin');
                 if (typeof updateNavigation === 'function') {
                     updateNavigation();
                 }
@@ -790,7 +884,10 @@ async function leavePlayerGame() {
         if (!response.ok) {
             if (response.status === 401) {
                 localStorage.removeItem('authCredentials');
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
                 localStorage.removeItem('userId');
+                localStorage.removeItem('userLogin');
                 if (typeof updateNavigation === 'function') {
                     updateNavigation();
                 }
@@ -817,6 +914,10 @@ async function leavePlayerGame() {
                 player2Id = null;
                 currentPlayerId = null;
                 gameBoard = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+                // Показываем навигацию при выходе из игры
+                if (typeof showNavigation === 'function') {
+                    showNavigation();
+                }
                 loadAvailableGames();
                 return;
             }
@@ -847,6 +948,11 @@ async function leavePlayerGame() {
         document.getElementById('refreshGamesBtn').style.display = 'inline-block';
         document.getElementById('backToMenuBtn2').style.display = 'inline-block';
         
+        // Показываем навигацию при выходе из игры
+        if (typeof showNavigation === 'function') {
+            showNavigation();
+        }
+        
         // Обновляем список доступных игр
         loadAvailableGames();
     } catch (error) {
@@ -865,6 +971,28 @@ function generateUUID() {
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
+    // Восстанавливаем userId из токена, если он есть
+    if (typeof ensureUserIdFromToken === 'function') {
+        ensureUserIdFromToken();
+    } else {
+        // Если функция не загружена, извлекаем userId напрямую
+        const accessToken = localStorage.getItem('accessToken');
+        if (accessToken && !localStorage.getItem('userId')) {
+            try {
+                const parts = accessToken.split('.');
+                if (parts.length === 3) {
+                    const payloadJson = atob(parts[1]);
+                    const payload = JSON.parse(payloadJson);
+                    if (payload.uuid) {
+                        localStorage.setItem('userId', payload.uuid);
+                    }
+                }
+            } catch (e) {
+                console.error('Ошибка при извлечении userId из токена:', e);
+            }
+        }
+    }
+    
     if (typeof updateNavigation === 'function') {
         updateNavigation();
     }
@@ -934,7 +1062,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const userId = localStorage.getItem('userId');
             if (!userId) return;
             
-            const isMyTurn = currentPlayerId && currentPlayerId === userId;
+            const userIdStr = String(userId);
+            const currentPlayerIdStr = currentPlayerId ? String(currentPlayerId) : null;
+            const isMyTurn = currentPlayerIdStr && currentPlayerIdStr === userIdStr;
             
             if (!isMyTurn) {
                 return;

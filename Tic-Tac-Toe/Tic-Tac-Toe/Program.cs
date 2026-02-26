@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using Tic_Tac_Toe.datasource.dbcontext;
 using Tic_Tac_Toe.di;
 using Tic_Tac_Toe.web.middleware;
@@ -16,7 +19,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-Configuration.ConfigureDependencies(builder.Services);
+Configuration.ConfigureDependencies(builder.Services, builder.Configuration);
 
 var app = builder.Build();
 
@@ -48,6 +51,7 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();

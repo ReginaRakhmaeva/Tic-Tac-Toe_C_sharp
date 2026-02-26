@@ -125,21 +125,42 @@
             }
 
             try {
-                // Создаем base64 строку для Basic Auth
-                const credentials = btoa(login + ':' + password);
-
                 const response = await fetch('/auth/login', {
                     method: 'POST',
                     headers: {
-                        'Authorization': 'Basic ' + credentials
-                    }
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ login, password })
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    localStorage.setItem('authCredentials', credentials);
-                    localStorage.setItem('userId', data.userId);
+                    const accessToken = data.accessToken || data.AccessToken;
+                    const refreshToken = data.refreshToken || data.RefreshToken;
+                    
+                    if (accessToken) {
+                        localStorage.setItem('accessToken', accessToken);
+
+                        try {
+                            const parts = accessToken.split('.');
+                            if (parts.length === 3) {
+                                const payloadJson = atob(parts[1]);
+                                const payload = JSON.parse(payloadJson);
+                                if (payload.uuid) {
+                                    localStorage.setItem('userId', payload.uuid);
+                                    console.log('UserId сохранен:', payload.uuid);
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Ошибка при извлечении userId из токена:', e);
+                        }
+                    }
+                    if (refreshToken) {
+                        localStorage.setItem('refreshToken', refreshToken);
+                    }
+                    
+                    localStorage.setItem('userLogin', login);
                     
                     if (typeof updateNavigation === 'function') {
                         updateNavigation();

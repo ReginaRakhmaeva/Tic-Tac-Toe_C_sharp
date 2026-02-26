@@ -1,4 +1,5 @@
-using System.Text;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using Tic_Tac_Toe.domain.service;
 using Tic_Tac_Toe.web.model;
 
@@ -8,10 +9,14 @@ namespace Tic_Tac_Toe.web.service;
 public class AuthService : IAuthService
 {
     private readonly IUserService _userService;
+    private readonly JwtProvider _jwtProvider;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public AuthService(IUserService userService)
+    public AuthService(IUserService userService, JwtProvider jwtProvider, IHttpContextAccessor httpContextAccessor)
     {
         _userService = userService ?? throw new ArgumentNullException(nameof(userService));
+        _jwtProvider = jwtProvider ?? throw new ArgumentNullException(nameof(jwtProvider));
+        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
     }
 
     public bool Register(SignUpRequest request)
@@ -31,57 +36,137 @@ public class AuthService : IAuthService
             return false;
         }
 
-        var user = _userService.CreateUser(request.Login, request.Password);
-        return user != null;
-    }
-
-    public Guid? Authenticate(string authorizationHeader)
-    {
-        if (string.IsNullOrWhiteSpace(authorizationHeader))
-        {
-            return null;
-        }
-
-        string base64Credentials = authorizationHeader.Trim();
-        if (base64Credentials.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
-        {
-            base64Credentials = base64Credentials.Substring(6);
-        }
-
         try
         {
-            byte[] credentialBytes = Convert.FromBase64String(base64Credentials);
-            string credentials = Encoding.UTF8.GetString(credentialBytes);
-
-            int separatorIndex = credentials.IndexOf(':');
-            if (separatorIndex < 0)
-            {
-                return null;
-            }
-
-            string login = credentials.Substring(0, separatorIndex);
-            string password = credentials.Substring(separatorIndex + 1);
-
-            var user = _userService.GetUserByLogin(login);
-            if (user == null)
-            {
-                return null;
-            }
-
-            if (!_userService.VerifyPassword(user, password))
-            {
-                return null;
-            }
-
-            return user.Id;
+            var user = _userService.CreateUser(request.Login, request.Password);
+            return user != null;
         }
-        catch (FormatException)
+        catch (ArgumentException)
         {
-            return null;
+            return false;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
         }
         catch (Exception)
         {
+            return false;
+        }
+    }
+
+    public JwtResponse? Authenticate(JwtRequest request)
+    {
+        if (request == null)
+        {
             return null;
         }
+
+        if (string.IsNullOrWhiteSpace(request.Login) || string.IsNullOrWhiteSpace(request.Password))
+        {
+            return null;
+        }
+
+        var user = _userService.GetUserByLogin(request.Login);
+        if (user == null)
+        {
+            return null;
+        }
+
+        if (!_userService.VerifyPassword(user, request.Password))
+        {
+            return null;
+        }
+
+        var accessToken = _jwtProvider.GenerateAccessToken(user);
+        var refreshToken = _jwtProvider.GenerateRefreshToken(user);
+
+        return new JwtResponse
+        {
+            Type = "Bearer",
+            AccessToken = accessToken,
+            RefreshToken = refreshToken
+        };
+    }
+
+    public JwtResponse? RefreshAccessToken(string refreshToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            return null;
+        }
+
+        if (!_jwtProvider.ValidateRefreshToken(refreshToken))
+        {
+            return null;
+        }
+
+        var claims = _jwtProvider.GetClaims(refreshToken);
+        if (claims == null)
+        {
+            return null;
+        }
+
+        var uuidClaim = claims.FindFirst("uuid");
+        if (uuidClaim == null || !Guid.TryParse(uuidClaim.Value, out Guid userId))
+        {
+            return null;
+        }
+
+        var user = _userService.GetUserById(userId);
+        if (user == null)
+        {
+            return null;
+        }
+
+        var newAccessToken = _jwtProvider.GenerateAccessToken(user);
+
+        return new JwtResponse
+        {
+            Type = "Bearer",
+            AccessToken = newAccessToken,
+            RefreshToken = refreshToken
+        };
+    }
+
+    public JwtResponse? RefreshRefreshToken(string refreshToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            return null;
+        }
+
+        if (!_jwtProvider.ValidateRefreshToken(refreshToken))
+        {
+            return null;
+        }
+
+        var claims = _jwtProvider.GetClaims(refreshToken);
+        if (claims == null)
+        {
+            return null;
+        }
+
+        var uuidClaim = claims.FindFirst("uuid");
+        if (uuidClaim == null || !Guid.TryParse(uuidClaim.Value, out Guid userId))
+        {
+            return null;
+        }
+
+        var user = _userService.GetUserById(userId);
+        if (user == null)
+        {
+            return null;
+        }
+
+        var newAccessToken = _jwtProvider.GenerateAccessToken(user);
+        var newRefreshToken = _jwtProvider.GenerateRefreshToken(user);
+
+        return new JwtResponse
+        {
+            Type = "Bearer",
+            AccessToken = newAccessToken,
+            RefreshToken = newRefreshToken
+        };
     }
 }

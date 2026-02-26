@@ -1,43 +1,62 @@
-﻿// Функция для выхода из аккаунта
+﻿// Безопасный разбор accessToken и извлечение uuid (userId)
+function getUserIdFromToken(accessToken) {
+    if (!accessToken) return null;
+    try {
+        const parts = accessToken.split('.');
+        if (parts.length !== 3) {
+            return null;
+        }
+        const payloadJson = atob(parts[1]);
+        const payload = JSON.parse(payloadJson);
+        return payload.uuid || null;
+    } catch (e) {
+        console.error('Ошибка при разборе accessToken:', e);
+        return null;
+    }
+}
+
+function ensureUserIdFromToken() {
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+        return;
+    }
+
+    const existingUserId = localStorage.getItem('userId');
+    if (existingUserId) {
+        return;
+    }
+
+    const uuid = getUserIdFromToken(accessToken);
+    if (uuid) {
+        localStorage.setItem('userId', uuid);
+    }
+}
+
 function logout() {
-    // Очищаем данные авторизации
     localStorage.removeItem('authCredentials');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('userId');
+    localStorage.removeItem('userLogin');
     
-    // Перенаправляем на страницу входа
     window.location.href = '/Login';
 }
 
-// Функция для получения логина из credentials
-function getLoginFromCredentials() {
-    const credentials = localStorage.getItem('authCredentials');
-    if (!credentials) {
-        return null;
-    }
-    
-    try {
-        // Декодируем base64
-        const decoded = atob(credentials);
-        // Извлекаем логин (до двоеточия)
-        const login = decoded.split(':')[0];
-        return login;
-    } catch (e) {
-        console.error('Error decoding credentials:', e);
-        return null;
-    }
+function getLogin() {
+    return localStorage.getItem('userLogin');
 }
 
-// Обновление навигации в зависимости от статуса авторизации
 function updateNavigation() {
-    const authCredentials = localStorage.getItem('authCredentials');
+    const accessToken = localStorage.getItem('accessToken');
     const userInfo = document.getElementById('userInfo');
     const loginLink = document.getElementById('loginLink');
     const userLogin = document.getElementById('userLogin');
     
-    if (authCredentials) {
-        // Пользователь авторизован
-        const login = getLoginFromCredentials();
-        if (login) {
+    if (accessToken) {
+        ensureUserIdFromToken();
+
+        const login = getLogin();
+        if (login && userLogin) {
             userLogin.textContent = login;
         }
         if (userInfo) {
@@ -47,7 +66,6 @@ function updateNavigation() {
             loginLink.style.display = 'none';
         }
     } else {
-        // Пользователь не авторизован
         if (userInfo) {
             userInfo.style.display = 'none';
         }
@@ -57,11 +75,11 @@ function updateNavigation() {
     }
 }
 
-// Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
+    ensureUserIdFromToken();
+
     updateNavigation();
     
-    // Обработчик кнопки выхода
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function(e) {
@@ -70,7 +88,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+function hideNavigation() {
+    const navbar = document.querySelector('nav.navbar');
+    if (navbar) {
+        navbar.style.display = 'none';
+    }
+}
 
-// Экспортируем функции для использования в других скриптах
+function showNavigation() {
+    const navbar = document.querySelector('nav.navbar');
+    if (navbar) {
+        navbar.style.display = 'block';
+    }
+}
 window.logout = logout;
 window.updateNavigation = updateNavigation;
+window.getUserIdFromToken = getUserIdFromToken;
+window.ensureUserIdFromToken = ensureUserIdFromToken;
+window.hideNavigation = hideNavigation;
+window.showNavigation = showNavigation;

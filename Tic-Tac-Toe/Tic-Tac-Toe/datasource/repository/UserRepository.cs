@@ -43,6 +43,11 @@ public class UserRepository : IUserRepository
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
         {
+            if (ex.InnerException != null && ex.InnerException.Message.Contains("duplicate key") || 
+                ex.InnerException != null && ex.InnerException.Message.Contains("unique constraint"))
+            {
+                throw new InvalidOperationException("User with this login already exists", ex);
+            }
             throw new InvalidOperationException($"Ошибка при сохранении пользователя в базу данных: {ex.InnerException?.Message ?? ex.Message}", ex);
         }
         catch (Exception ex)

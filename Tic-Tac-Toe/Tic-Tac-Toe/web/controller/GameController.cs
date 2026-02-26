@@ -428,11 +428,18 @@ public class GameController : ControllerBase
 
     private bool TryGetUserId(out Guid userId)
     {
+        if (HttpContext.User is UserIdPrincipal userPrincipal)
+        {
+            userId = userPrincipal.UserId;
+            return true;
+        }
+
         if (HttpContext.Items.TryGetValue("UserId", out var userIdObj) && userIdObj is Guid id)
         {
             userId = id;
             return true;
         }
+
         userId = Guid.Empty;
         return false;
     }

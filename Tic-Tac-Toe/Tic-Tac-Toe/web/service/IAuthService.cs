@@ -7,5 +7,9 @@ public interface IAuthService
 {
     bool Register(SignUpRequest request);
 
-    Guid? Authenticate(string authorizationHeader);
+    JwtResponse? Authenticate(JwtRequest request);
+
+    JwtResponse? RefreshAccessToken(string refreshToken);
+
+    JwtResponse? RefreshRefreshToken(string refreshToken);
 }
