@@ -6,7 +6,6 @@ namespace Tic_Tac_Toe.datasource.mapper;
 /// Маппер для преобразования Game между domain и datasource слоями
 public static class GameMapper
 {
-    /// Преобразование из domain в datasource
     public static GameDto ToDto(Game domain)
     {
         if (domain == null)
@@ -24,7 +23,6 @@ public static class GameMapper
         return dto;
     }
 
-    /// Преобразование из datasource в domain
     public static Game ToDomain(GameDto dto)
     {
         if (dto == null)

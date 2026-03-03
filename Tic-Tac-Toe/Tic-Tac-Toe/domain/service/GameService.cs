@@ -7,7 +7,6 @@ namespace Tic_Tac_Toe.domain.service;
 public class GameService : IGameService
 {
     
-    /// Получение следующего хода текущей игры алгоритмом Минимакс
     public Move GetNextMove(Game game)
     {
         if (game == null || game.Board == null)
@@ -15,17 +14,14 @@ public class GameService : IGameService
             throw new ArgumentNullException(nameof(game));
         }
 
-        // Определяем, за кого играет компьютер (обычно O)
         int computerPlayer = GameBoard.PlayerO;
         int humanPlayer = GameBoard.PlayerX;
 
-        // Находим лучший ход с помощью алгоритма Минимакс
         var bestMove = Minimax(game.Board, computerPlayer, humanPlayer);
         return bestMove;
     }
 
     
-    /// Алгоритм Минимакс для поиска оптимального хода
     private Move Minimax(GameBoard board, int maximizingPlayer, int minimizingPlayer)
     {
         int bestScore = int.MinValue;
@@ -51,14 +47,12 @@ public class GameService : IGameService
                     }
                     else if (score == bestScore)
                     {
-                        // Если оценка равна лучшей, добавляем в список для случайного выбора
                         bestMoves.Add(new Move(i, j, maximizingPlayer));
                     }
                 }
             }
         }
 
-        // Если есть несколько ходов с одинаковой оценкой, выбираем случайный
         if (bestMoves.Count > 0)
         {
             Random random = new Random();
@@ -69,7 +63,6 @@ public class GameService : IGameService
     }
 
     
-    /// Рекурсивная функция алгоритма Минимакс
     private int MinimaxRecursive(GameBoard board, int depth, bool isMaximizing, int maximizingPlayer, int minimizingPlayer)
     {
         var status = EvaluateBoard(board);
@@ -130,7 +123,6 @@ public class GameService : IGameService
     }
 
     
-    /// Валидация игрового поля текущей игры (проверка, что не изменены предыдущие ходы)
     public bool ValidateBoard(Game game)
     {
         if (game == null || game.Board == null)
@@ -171,7 +163,6 @@ public class GameService : IGameService
     }
 
     
-    /// Проверка валидности значений на поле
     private bool IsBoardValid(GameBoard board)
     {
         for (int i = 0; i < 3; i++)
@@ -189,7 +180,6 @@ public class GameService : IGameService
     }
 
     
-    /// Проверка окончания игры
     public GameStatus CheckGameEnd(Game game)
     {
         if (game == null || game.Board == null)
@@ -200,7 +190,6 @@ public class GameService : IGameService
         return EvaluateBoard(game.Board);
     }
 
-    /// Обработка хода игрока: обновляет доску, определяет ход и добавляет в историю
     public bool ProcessPlayerMove(Game game, GameBoard newBoard)
     {
         if (game == null || game.Board == null || newBoard == null)
@@ -211,7 +200,6 @@ public class GameService : IGameService
         GameBoard oldBoard = game.Board.Clone();
         game.Board = newBoard;
 
-        // Определяем ход игрока, сравнивая старую и новую доску
         for (int i = 0; i < 3; i++)
         {
             for (int j = 0; j < 3; j++)
@@ -231,7 +219,6 @@ public class GameService : IGameService
         return false;
     }
 
-    /// Применение хода компьютера: получает ход, применяет к доске и добавляет в историю
     public Move MakeComputerMove(Game game)
     {
         if (game == null || game.Board == null)
@@ -241,10 +228,8 @@ public class GameService : IGameService
 
         Move computerMove = GetNextMove(game);
         
-        // Применяем ход к доске
         game.Board[computerMove.Row, computerMove.Col] = GameBoard.PlayerO;
         
-        // Добавляем в историю
         if (game.MoveHistory == null)
         {
             game.MoveHistory = new List<Move>();
@@ -255,7 +240,6 @@ public class GameService : IGameService
     }
 
     
-    /// Оценка состояния игрового поля
     private GameStatus EvaluateBoard(GameBoard board)
     {
         for (int i = 0; i < 3; i++)

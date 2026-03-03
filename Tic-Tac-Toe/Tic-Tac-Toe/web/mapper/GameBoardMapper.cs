@@ -6,7 +6,6 @@ namespace Tic_Tac_Toe.web.mapper;
 /// Маппер для преобразования GameBoard между domain и web слоями
 public static class GameBoardMapper
 {
-    /// Преобразование из web в domain
     public static GameBoard ToDomain(GameBoardRequest request)
     {
         if (request == null)
@@ -35,7 +34,6 @@ public static class GameBoardMapper
         return new GameBoard(boardArray);
     }
 
-    /// Преобразование из domain в web
     public static GameBoardResponse ToResponse(GameBoard domain)
     {
         if (domain == null)

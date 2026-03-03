@@ -15,6 +15,8 @@ public static class Configuration
 
         services.AddScoped<IGameRepository, GameRepository>();
 
-        services.AddScoped<IGameService, GameServiceDataSource>();
+        services.AddScoped<IGameService, GameService>();
+
+        services.AddScoped<IGameServiceDataSource, GameServiceDataSource>();
     }
 }

@@ -4,20 +4,18 @@ using Tic_Tac_Toe.datasource.repository;
 
 namespace Tic_Tac_Toe.datasource.service;
 
-/// Класс, реализующий интерфейс IGameService и принимающий в качестве параметра интерфейс репозитория
-public class GameServiceDataSource : IGameService
+/// Класс, реализующий интерфейс IGameServiceDataSource и принимающий в качестве параметра интерфейс репозитория
+public class GameServiceDataSource : IGameServiceDataSource
 {
     private readonly IGameRepository _repository;
-    private readonly GameService _domainService;
+    private readonly IGameService _domainService;
 
-    /// Конструктор, принимающий интерфейс репозитория
-    public GameServiceDataSource(IGameRepository repository)
+    public GameServiceDataSource(IGameRepository repository, IGameService domainService)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-        _domainService = new GameService();
+        _domainService = domainService ?? throw new ArgumentNullException(nameof(domainService));
     }
 
-    /// Получение следующего хода текущей игры алгоритмом Минимакс
     public Move GetNextMove(Game game)
     {
         if (game == null)
@@ -32,7 +30,6 @@ public class GameServiceDataSource : IGameService
         return move;
     }
 
-    /// Валидация игрового поля текущей игры (проверка, что не изменены предыдущие ходы)
     public bool ValidateBoard(Game game)
     {
         if (game == null)
@@ -43,7 +40,6 @@ public class GameServiceDataSource : IGameService
         return _domainService.ValidateBoard(game);
     }
 
-    /// Проверка окончания игры
     public GameStatus CheckGameEnd(Game game)
     {
         if (game == null)
@@ -54,7 +50,6 @@ public class GameServiceDataSource : IGameService
         return _domainService.CheckGameEnd(game);
     }
 
-    /// Обработка хода игрока: обновляет доску, определяет ход и добавляет в историю
     public bool ProcessPlayerMove(Game game, GameBoard newBoard)
     {
         if (game == null || newBoard == null)
@@ -65,7 +60,6 @@ public class GameServiceDataSource : IGameService
         return _domainService.ProcessPlayerMove(game, newBoard);
     }
 
-    /// Применение хода компьютера: получает ход, применяет к доске и добавляет в историю
     public Move MakeComputerMove(Game game)
     {
         if (game == null)
@@ -78,6 +72,21 @@ public class GameServiceDataSource : IGameService
         _repository.Save(game);
         
         return move;
+    }
+
+    public Game? GetGame(Guid id)
+    {
+        return _repository.Get(id);
+    }
+
+    public void SaveGame(Game game)
+    {
+        if (game == null)
+        {
+            throw new ArgumentNullException(nameof(game));
+        }
+
+        _repository.Save(game);
     }
 }
 

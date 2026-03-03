@@ -3,7 +3,6 @@ namespace Tic_Tac_Toe.datasource.model;
 /// Модель игрового поля для хранения в datasource слое
 public class GameBoardDto
 {
-    /// Матрица игрового поля 3x3
     public int[,] Board { get; set; }
 
     public GameBoardDto()

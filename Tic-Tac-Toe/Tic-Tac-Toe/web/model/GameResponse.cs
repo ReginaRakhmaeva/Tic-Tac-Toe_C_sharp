@@ -6,7 +6,6 @@ public class GameResponse
 
     public GameBoardResponse Board { get; set; }
 
-    /// Статус игры: "InProgress", "PlayerXWins", "PlayerOWins", "Draw"
     public string Status { get; set; }
 
     public GameResponse()

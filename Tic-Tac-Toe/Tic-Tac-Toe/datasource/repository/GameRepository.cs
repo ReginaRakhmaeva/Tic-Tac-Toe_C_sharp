@@ -13,7 +13,6 @@ public class GameRepository : IGameRepository
         _storage = storage ?? throw new ArgumentNullException(nameof(storage));
     }
 
-    /// Сохранить текущую игру
     public void Save(Game game)
     {
         if (game == null)
@@ -25,7 +24,6 @@ public class GameRepository : IGameRepository
         _storage.Save(dto);
     }
 
-    /// Получить текущую игру по UUID
     public Game? Get(Guid id)
     {
         var dto = _storage.Get(id);

@@ -5,7 +5,7 @@ public class Move
 {
     public int Row { get; set; }
     public int Col { get; set; }
-    public int Player { get; set; } // 1 - X, 2 - O
+    public int Player { get; set; } 
 
     public Move(int row, int col, int player)
     {

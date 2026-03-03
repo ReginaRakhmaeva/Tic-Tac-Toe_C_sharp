@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Tic_Tac_Toe.domain.model;
-using Tic_Tac_Toe.domain.service;
-using Tic_Tac_Toe.datasource.repository;
+using Tic_Tac_Toe.datasource.service;
 using Tic_Tac_Toe.web.model;
 using Tic_Tac_Toe.web.mapper;
 
@@ -12,13 +11,11 @@ namespace Tic_Tac_Toe.web.controller;
 [Route("game")]
 public class GameController : ControllerBase
 {
-    private readonly IGameService _gameService;
-    private readonly IGameRepository _repository;
+    private readonly IGameServiceDataSource _gameService;
 
-    public GameController(IGameService gameService, IGameRepository repository)
+    public GameController(IGameServiceDataSource gameService)
     {
         _gameService = gameService ?? throw new ArgumentNullException(nameof(gameService));
-        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
     [HttpGet("{id}")]
@@ -26,7 +23,7 @@ public class GameController : ControllerBase
     {
         try
         {
-            var currentGame = _repository.Get(id);
+            var currentGame = _gameService.GetGame(id);
             
             if (currentGame == null)
             {
@@ -37,11 +34,10 @@ public class GameController : ControllerBase
                 if (computerFirst)
                 {
                     _gameService.MakeComputerMove(currentGame);
-                    _repository.Save(currentGame);
                 }
                 else
                 {
-                    _repository.Save(currentGame);
+                    _gameService.SaveGame(currentGame);
                 }
             }
             
@@ -85,7 +81,7 @@ public class GameController : ControllerBase
                 return BadRequest(new ErrorResponse("Invalid game data", ex.Message));
             }
 
-            Game currentGame = _repository.Get(id) ?? new Game { Id = id };
+            Game currentGame = _gameService.GetGame(id) ?? new Game { Id = id };
 
             if (!_gameService.ProcessPlayerMove(currentGame, gameFromRequest.Board))
             {
@@ -97,16 +93,17 @@ public class GameController : ControllerBase
                 return BadRequest(new ErrorResponse("Invalid game board: previous moves have been changed"));
             }
 
+            // Сохраняем ход игрока
+            _gameService.SaveGame(currentGame);
+
             var gameStatus = _gameService.CheckGameEnd(currentGame);
             if (gameStatus != GameStatus.InProgress)
             {
-                _repository.Save(currentGame);
                 var gameResponse = GameMapper.ToResponse(currentGame, gameStatus);
                 return Ok(gameResponse);
             }
 
             _gameService.MakeComputerMove(currentGame);
-            _repository.Save(currentGame);
 
             var finalStatus = _gameService.CheckGameEnd(currentGame);
             var finalResponse = GameMapper.ToResponse(currentGame, finalStatus);
