@@ -11,5 +11,6 @@ public interface IGameRepository
     List<Game> GetInactiveGamesByPlayer1Id(Guid player1Id);
     void DeleteInactiveGamesByPlayer1Id(Guid player1Id);
     List<Game> GetGamesByUserId(Guid userId);
+    List<PlayerStats> GetTopPlayersByWinRatio(int topN);
 }
 

@@ -104,5 +104,15 @@ public class GameServiceDataSource : IGameServiceDataSource
             .OrderByDescending(g => g.CreatedAt)
             .ToList();
     }
+
+    public List<PlayerStats> GetTopPlayers(int topN)
+    {
+        if (topN <= 0)
+        {
+            return new List<PlayerStats>();
+        }
+
+        return _repository.GetTopPlayersByWinRatio(topN);
+    }
 }
 

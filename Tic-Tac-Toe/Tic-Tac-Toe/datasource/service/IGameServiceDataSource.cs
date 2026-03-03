@@ -18,4 +18,6 @@ public interface IGameServiceDataSource : IGameService
     void DeleteInactiveGamesByPlayer1Id(Guid player1Id);
 
     List<Game> GetCompletedGamesByUserId(Guid userId);
+
+    List<PlayerStats> GetTopPlayers(int topN);
 }

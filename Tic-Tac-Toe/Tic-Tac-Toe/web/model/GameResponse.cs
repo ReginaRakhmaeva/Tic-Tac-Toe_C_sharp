@@ -24,6 +24,10 @@ public class GameResponse
 
     public string Player2Symbol { get; set; }
 
+    public string? Player1Login { get; set; }
+
+    public string? Player2Login { get; set; }
+
     public GameResponse()
     {
         Id = Guid.Empty;
@@ -37,5 +41,7 @@ public class GameResponse
             GameType = 0;
             Player1Symbol = "X";
             Player2Symbol = "O";
+            Player1Login = null;
+            Player2Login = null;
     }
 }

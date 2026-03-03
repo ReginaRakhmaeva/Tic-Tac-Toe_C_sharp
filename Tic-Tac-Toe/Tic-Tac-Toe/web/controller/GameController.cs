@@ -3,6 +3,8 @@ using Tic_Tac_Toe.domain.model;
 using Tic_Tac_Toe.datasource.service;
 using Tic_Tac_Toe.web.model;
 using Tic_Tac_Toe.web.mapper;
+using Tic_Tac_Toe.web.middleware;
+using Tic_Tac_Toe.domain.service;
 using System.Linq;
 
 namespace Tic_Tac_Toe.web.controller;
@@ -13,10 +15,12 @@ namespace Tic_Tac_Toe.web.controller;
 public class GameController : ControllerBase
 {
     private readonly IGameServiceDataSource _gameService;
+    private readonly IUserService _userService;
 
-    public GameController(IGameServiceDataSource gameService)
+    public GameController(IGameServiceDataSource gameService, IUserService userService)
     {
         _gameService = gameService ?? throw new ArgumentNullException(nameof(gameService));
+        _userService = userService ?? throw new ArgumentNullException(nameof(userService));
     }
 
     /// Получение доступных игр (ожидающих второго игрока)
@@ -255,36 +259,16 @@ public class GameController : ControllerBase
             return Forbid();
         }
 
-        bool isCreator = game.UserId == userId || game.Player1Id == userId;
-        bool isSecondPlayer = game.Player2Id == userId;
+        bool isGameFinished = game.WinnerId != null || 
+                             (game.MoveHistory != null && game.MoveHistory.Count >= 9);
         
-        bool canDelete = game.Player2Id == null && 
-                        (game.MoveHistory == null || game.MoveHistory.Count == 0);
+        if (isGameFinished)
+        {
+            return Ok(new { message = "Left the completed game" });
+        }
 
-        if (canDelete)
-        {
-            _gameService.DeleteGame(id);
-            return Ok(new { message = "Game deleted successfully" });
-        }
-        else
-        {
-            if (isSecondPlayer)
-            {
-                _gameService.DeleteGame(id);
-                return Ok(new { message = "Game deleted successfully" });
-            }
-            else if (isCreator)
-            {
-                game.Player1Id = null;
-                
-                game.CurrentPlayerId = null;
-                
-                _gameService.SaveGame(game);
-                return Ok(new { message = "Left the game" });
-            }
-        }
-        
-        return BadRequest(new ErrorResponse("Unable to leave the game"));
+        _gameService.DeleteGame(id);
+        return Ok(new { message = "Game deleted successfully" });
     }
 
     /// Удаление игры (только для создателя, если игра еще не началась)
@@ -346,7 +330,28 @@ public class GameController : ControllerBase
                 status = GameStatus.PlayerWins; 
             }
             
-            return GameMapper.ToResponse(game, status);
+            var response = GameMapper.ToResponse(game, status);
+            
+            // Получаем логины игроков
+            if (game.Player1Id.HasValue && !GameConstants.IsComputer(game.Player1Id))
+            {
+                var player1 = _userService.GetUserById(game.Player1Id.Value);
+                if (player1 != null)
+                {
+                    response.Player1Login = player1.Login;
+                }
+            }
+            
+            if (game.Player2Id.HasValue && !GameConstants.IsComputer(game.Player2Id))
+            {
+                var player2 = _userService.GetUserById(game.Player2Id.Value);
+                if (player2 != null)
+                {
+                    response.Player2Login = player2.Login;
+                }
+            }
+            
+            return response;
         }).ToList();
 
         return Ok(responses);
@@ -459,6 +464,38 @@ public class GameController : ControllerBase
             _gameService.SaveGame(currentGame);
             
             return Ok(GameMapper.ToResponse(currentGame, finalStatus));
+        }
+    }
+
+    /// Получение первых N лучших игроков по соотношению побед
+    [UserAuthenticator]
+    [HttpGet("leaderboard")]
+    public IActionResult GetLeaderboard([FromQuery] int topN = 10)
+    {
+        if (!TryGetUserId(out var userId))
+        {
+            return Unauthorized(new ErrorResponse("User ID not found in authorization context"));
+        }
+
+        if (topN <= 0)
+        {
+            return BadRequest(new ErrorResponse("topN must be greater than 0"));
+        }
+
+        if (topN > 100)
+        {
+            return BadRequest(new ErrorResponse("topN cannot exceed 100"));
+        }
+
+        try
+        {
+            var topPlayers = _gameService.GetTopPlayers(topN);
+            var responses = topPlayers.Select(LeaderboardMapper.ToResponse).ToList();
+            return Ok(responses);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new ErrorResponse("Internal server error", ex.Message));
         }
     }
 
