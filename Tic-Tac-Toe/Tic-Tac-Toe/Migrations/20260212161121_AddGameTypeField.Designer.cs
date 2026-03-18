@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Tic_Tac_Toe.datasource.dbcontext;
@@ -11,9 +12,11 @@ using Tic_Tac_Toe.datasource.dbcontext;
 namespace Tic_Tac_Toe.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260212161121_AddGameTypeField")]
+    partial class AddGameTypeField
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -33,10 +36,6 @@ namespace Tic_Tac_Toe.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb")
                         .HasColumnName("board");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
 
                     b.Property<Guid?>("CurrentPlayerId")
                         .HasColumnType("uuid")

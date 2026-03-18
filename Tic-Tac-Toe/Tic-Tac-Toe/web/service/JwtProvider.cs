@@ -37,7 +37,8 @@ public class JwtProvider
         {
             Subject = new ClaimsIdentity(new[]
             {
-                new Claim("uuid", user.Id.ToString())
+                new Claim("uuid", user.Id.ToString()),
+                new Claim("type", "access")
             }),
             Expires = DateTime.UtcNow.AddMinutes(_accessTokenExpirationMinutes),
             Issuer = _issuer,
@@ -63,7 +64,8 @@ public class JwtProvider
         {
             Subject = new ClaimsIdentity(new[]
             {
-                new Claim("uuid", user.Id.ToString())
+                new Claim("uuid", user.Id.ToString()),
+                new Claim("type", "refresh")
             }),
             Expires = DateTime.UtcNow.AddDays(_refreshTokenExpirationDays),
             Issuer = _issuer,
@@ -99,8 +101,10 @@ public class JwtProvider
                 ClockSkew = TimeSpan.Zero
             };
 
-            tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
-            return true;
+            var principal = tokenHandler.ValidateToken(token, validationParameters, out _);
+
+            var type = principal.FindFirst("type")?.Value;
+            return type == "access";
         }
         catch
         {
@@ -132,8 +136,10 @@ public class JwtProvider
                 ClockSkew = TimeSpan.Zero
             };
 
-            tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
-            return true;
+            var principal = tokenHandler.ValidateToken(token, validationParameters, out _);
+
+            var type = principal.FindFirst("type")?.Value;
+            return type == "refresh";
         }
         catch
         {

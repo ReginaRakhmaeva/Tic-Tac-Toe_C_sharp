@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Tic_Tac_Toe.datasource.dbcontext;
@@ -11,9 +12,11 @@ using Tic_Tac_Toe.datasource.dbcontext;
 namespace Tic_Tac_Toe.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260211174523_RestoreMovesTable")]
+    partial class RestoreMovesTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -34,17 +37,9 @@ namespace Tic_Tac_Toe.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("board");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
                     b.Property<Guid?>("CurrentPlayerId")
                         .HasColumnType("uuid")
                         .HasColumnName("current_player_id");
-
-                    b.Property<int>("GameType")
-                        .HasColumnType("integer")
-                        .HasColumnName("game_type");
 
                     b.Property<Guid?>("Player1Id")
                         .HasColumnType("uuid")
@@ -80,6 +75,9 @@ namespace Tic_Tac_Toe.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("col");
 
+                    b.Property<Guid?>("GameDtoId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("GameId")
                         .HasColumnType("uuid")
                         .HasColumnName("game_id");
@@ -93,6 +91,8 @@ namespace Tic_Tac_Toe.Migrations
                         .HasColumnName("row");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GameDtoId");
 
                     b.HasIndex("GameId");
 
@@ -130,6 +130,10 @@ namespace Tic_Tac_Toe.Migrations
                 {
                     b.HasOne("Tic_Tac_Toe.datasource.model.GameDto", null)
                         .WithMany("Moves")
+                        .HasForeignKey("GameDtoId");
+
+                    b.HasOne("Tic_Tac_Toe.datasource.model.GameDto", null)
+                        .WithMany()
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
